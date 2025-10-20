@@ -17,6 +17,11 @@ class Config:
     ENERGY_PER_SPIN = int(os.getenv("ENERGY_PER_SPIN", 1))
     SPIN_COOLDOWN_MS = int(os.getenv("SPIN_COOLDOWN_MS", 1200))
 
+    # Wheel of fortune
+    DAILY_FREE_WHEEL_SPINS = int(os.getenv("DAILY_FREE_WHEEL_SPINS", 1))
+    WHEEL_COOLDOWN_HOURS = int(os.getenv("WHEEL_COOLDOWN_HOURS", 4))
+    WHEEL_TOKEN_COST = int(os.getenv("WHEEL_TOKEN_COST", 1))
+
     # Payments (Stars / XTR)
     # Using Stars: currency must be "XTR" per Telegram docs.
     PRODUCT_ENERGY_PACK_ID = os.getenv("PRODUCT_ENERGY_PACK_ID", "energy_100")

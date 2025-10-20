@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,35 +9,59 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>🦈 SharkSpin</h1>
+    <header class="hero">
+      <h1>🦈 SharkSpin</h1>
+      <p class="tagline">Dive into the arcade reef and spin your way to fortune.</p>
+    </header>
 
-    <div id="stats">
-      <div>Level: <span id="level">1</span></div>
-      <div>SharkCoins: <span id="coins">0</span></div>
-      <div>Energy: <span id="energy">0</span></div>
-    </div>
+    <section class="panel stats">
+      <div class="stat"><span class="label">Level</span><span id="level">1</span></div>
+      <div class="stat"><span class="label">SharkCoins</span><span id="coins">0</span></div>
+      <div class="stat"><span class="label">Energy</span><span id="energy">0</span></div>
+      <div class="stat"><span class="label">Wheel Tokens</span><span id="wheelTokens">0</span></div>
+    </section>
 
-    <div class="reel-container">
-      <div id="reel1" class="reel">🦈</div>
-      <div id="reel2" class="reel">💎</div>
-      <div id="reel3" class="reel">🍋</div>
-    </div>
+    <section class="panel main-slot">
+      <h2>Main Spin</h2>
+      <div class="reel-container" id="slotReels">
+        <div class="reel" id="reel1">🦈</div>
+        <div class="reel" id="reel2">💎</div>
+        <div class="reel" id="reel3">🍋</div>
+      </div>
+      <div class="multiplier-buttons">
+        <button class="multiplier-btn active" data-mult="1">x1</button>
+        <button class="multiplier-btn" data-mult="2">x2</button>
+        <button class="multiplier-btn" data-mult="3">x3</button>
+        <button class="multiplier-btn" data-mult="5">x5</button>
+      </div>
+      <button id="spinBtn" class="primary">Spin the Reef 🎰</button>
+      <div id="result" class="result"></div>
+    </section>
 
-    <div class="multiplier-buttons">
-      <button class="multiplier-btn" data-mult="1">x1</button>
-      <button class="multiplier-btn" data-mult="2">x2</button>
-      <button class="multiplier-btn" data-mult="3">x3</button>
-      <button class="multiplier-btn" data-mult="5">x5</button>
-    </div>
+    <section class="panel wheel" id="wheelSection">
+      <h2>Wheel of Tides</h2>
+      <div class="wheel-pointer"></div>
+      <div class="wheel-wrapper">
+        <div class="fortune-wheel" id="fortuneWheel"></div>
+      </div>
+      <button id="wheelSpinBtn" class="secondary">Spin Wheel of Fortune</button>
+      <div id="wheelMessage" class="result"></div>
+    </section>
 
-    <button id="spinBtn">SPIN 🎰</button>
+    <section class="panel events" id="eventsSection">
+      <h2>Live Events</h2>
+      <div id="eventsList" class="events-list"></div>
+    </section>
 
-    <div id="result"></div>
+    <section class="panel stickers" id="stickersSection">
+      <h2>Sticker Albums</h2>
+      <div id="albumsList" class="albums"></div>
+    </section>
 
-    <div class="shop">
-      <h3>Shop</h3>
-      <button id="buyEnergyBtn">Buy 100 Energy (⭐ Stars)</button>
-    </div>
+    <section class="panel shop">
+      <h2>Shop</h2>
+      <button id="buyEnergyBtn" class="secondary">Buy 100 Energy (⭐ Stars)</button>
+    </section>
   </div>
   <script src="/static/game.js"></script>
 </body>
