@@ -1,0 +1,518 @@
+# Project: SharkSpin — Telegram Mini‑Game with Stars (XTR) Payments
+# Stack: Flask (PythonAnywhere) + SQLite (SQLAlchemy) + python-telegram-bot + Telegram Mini App (HTML/JS)
+# Notes:
+# - Self-host on PythonAnywhere (WSGI for Flask; separate process for bot webhook)
+# - Payments use Telegram Stars (currency "XTR").
+# - Keep bot token & webhook secret in environment variables.
+
+############################################
+# 1) project_structure.txt
+############################################
+# sharkspin/
+# ├─ app.py                 # Flask app (API + Mini App hosting)
+# ├─ bot.py                 # Telegram bot: gameplay commands + Stars payments
+# ├─ models.py              # SQLAlchemy models (SQLite)
+# ├─ game_logic.py          # Spin math + rewards + upgrades
+# ├─ config.py              # Settings from env vars
+# ├─ requirements.txt
+# ├─ /templates
+# │   └─ index.html         # Telegram Mini App UI (SharkSpin)
+# ├─ /static
+# │   ├─ styles.css
+# │   └─ game.js            # Client logic; talks to Flask API; uses Telegram WebApp SDK
+# └─ /migrations            # (optional) alembic if you want migrations later
+
+############################################
+# 2) requirements.txt
+############################################
+# Flask==3.0.3
+# SQLAlchemy==2.0.34
+# python-telegram-bot==22.1
+# python-dotenv==1.0.1
+# itsdangerous==2.2.0
+# waitress==3.0.0
+
+############################################
+# 3) config.py
+############################################
+import os
+
+class Config:
+    # Flask
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///sharkspin.db")
+    SQLALCHEMY_ECHO = False
+
+    # Telegram
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_WEBHOOK_URL = os.getenv("TELEGRAM_WEBHOOK_URL", "")  # https://<yourdomain>/bot/webhook
+
+    # Game
+    STARTING_COINS = int(os.getenv("STARTING_COINS", 100))
+    STARTING_ENERGY = int(os.getenv("STARTING_ENERGY", 25))
+    ENERGY_PER_SPIN = int(os.getenv("ENERGY_PER_SPIN", 1))
+    SPIN_COOLDOWN_MS = int(os.getenv("SPIN_COOLDOWN_MS", 1200))
+
+    # Payments (Stars / XTR)
+    # Using Stars: currency must be "XTR" per Telegram docs.
+    PRODUCT_ENERGY_PACK_ID = os.getenv("PRODUCT_ENERGY_PACK_ID", "energy_100")
+    PRODUCT_ENERGY_PACK_AMOUNT_STARS = int(os.getenv("PRODUCT_ENERGY_PACK_AMOUNT_STARS", 50))  # 50 Stars
+    PRODUCT_ENERGY_PACK_ENERGY = int(os.getenv("PRODUCT_ENERGY_PACK_ENERGY", 100))
+
+############################################
+# 4) models.py
+############################################
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float
+from sqlalchemy.orm import declarative_base, relationship
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    tg_user_id = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String)
+    coins = Column(Integer, default=0)
+    energy = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_spin_at = Column(DateTime)
+
+class Spin(Base):
+    __tablename__ = "spins"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    delta_coins = Column(Integer, default=0)
+    result = Column(String)  # e.g., "small_win", "jackpot", "miss"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+class Payment(Base):
+    __tablename__ = "payments"
+    id = Column(Integer, primary_key=True)
+    tg_payment_charge_id = Column(String, index=True)  # from SuccessfulPayment.telegram_payment_charge_id
+    payload = Column(String)  # what we sold
+    stars_amount = Column(Integer)  # Stars amount paid (smallest unit is 1 star)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+############################################
+# 5) game_logic.py
+############################################
+import random
+from datetime import datetime, timedelta
+
+from config import Config
+
+REEL_TABLE = [
+    ("miss", 0, 0.60),
+    ("small_win", 5, 0.25),
+    ("med_win", 20, 0.10),
+    ("big_win", 100, 0.045),
+    ("jackpot", 1000, 0.005),
+]
+
+# Precompute cumulative weights
+CUM = []
+acc = 0.0
+for name, payout, p in REEL_TABLE:
+    acc += p
+    CUM.append((name, payout, acc))
+
+
+def roll_once():
+    r = random.random()
+    for name, payout, c in CUM:
+        if r <= c:
+            return name, payout
+    return REEL_TABLE[-1][0], REEL_TABLE[-1][1]
+
+
+def can_spin(user):
+    if user.energy < Config.ENERGY_PER_SPIN:
+        return False, "Not enough energy"
+    # Optional: cooldown enforcement can be client-side; we keep simple here
+    return True, None
+
+
+def apply_spin(user):
+    ok, msg = can_spin(user)
+    if not ok:
+        return False, msg, 0, ""
+    user.energy -= Config.ENERGY_PER_SPIN
+    name, payout = roll_once()
+    user.coins += payout
+    user.last_spin_at = datetime.utcnow()
+    return True, None, payout, name
+
+############################################
+# 6) app.py (Flask API + Mini App)
+############################################
+from flask import Flask, jsonify, request, render_template, abort
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
+from itsdangerous import URLSafeSerializer, BadSignature
+
+from config import Config
+from models import Base, User, Spin
+from game_logic import apply_spin
+
+app = Flask(__name__)
+app.config.from_object(Config)
+
+engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, future=True)
+Session = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+Base.metadata.create_all(engine)
+
+# Sign mini app init data (optional – extra layer beyond Telegram WebApp initData)
+signer = URLSafeSerializer(Config.SECRET_KEY, salt="sharkspin:webapp")
+
+@app.get("/")
+def index():
+    return render_template("index.html")
+
+@app.post("/api/auth")
+def api_auth():
+    # Client sends Telegram WebApp initData for validation. For MVP, accept tg_user_id.
+    data = request.get_json(force=True)
+    tg_user_id = str(data.get("tg_user_id"))
+    username = data.get("username")
+    if not tg_user_id:
+        abort(400)
+    with Session() as s:
+        user = s.execute(select(User).where(User.tg_user_id == tg_user_id)).scalar_one_or_none()
+        if not user:
+            user = User(
+                tg_user_id=tg_user_id,
+                username=username,
+                coins=Config.STARTING_COINS,
+                energy=Config.STARTING_ENERGY,
+            )
+            s.add(user)
+            s.commit()
+        token = signer.dumps({"u": tg_user_id})
+        return jsonify({
+            "ok": True,
+            "token": token,
+            "coins": user.coins,
+            "energy": user.energy,
+        })
+
+
+def _get_user_from_token(token):
+    try:
+        payload = signer.loads(token)
+        tg_user_id = payload.get("u")
+    except BadSignature:
+        return None
+    with Session() as s:
+        return s.execute(select(User).where(User.tg_user_id == str(tg_user_id))).scalar_one_or_none()
+
+@app.post("/api/spin")
+def api_spin():
+    payload = request.get_json(force=True)
+    token = payload.get("token")
+    user = _get_user_from_token(token)
+    if not user:
+        abort(401)
+    with Session() as s:
+        # refresh user from this session
+        user = s.merge(user)
+        ok, msg, payout, result_name = apply_spin(user)
+        if not ok:
+            return jsonify({"ok": False, "error": msg}), 200
+        rec = Spin(user_id=user.id, delta_coins=payout, result=result_name)
+        s.add(rec)
+        s.commit()
+        return jsonify({
+            "ok": True,
+            "payout": payout,
+            "result": result_name,
+            "coins": user.coins,
+            "energy": user.energy,
+        })
+
+@app.get("/api/me")
+def api_me():
+    token = request.args.get("token")
+    user = _get_user_from_token(token)
+    if not user:
+        abort(401)
+    return jsonify({"ok": True, "coins": user.coins, "energy": user.energy})
+
+############################################
+# 7) bot.py (python-telegram-bot v22) — Stars (XTR) payments
+############################################
+import logging
+from telegram import (
+    Update,
+    LabeledPrice,
+)
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    PreCheckoutQueryHandler,
+    MessageHandler,
+    filters,
+)
+from sqlalchemy import select
+
+from config import Config
+from models import User, Payment, Base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("sharkspin.bot")
+
+engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, future=True)
+Session = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+Base.metadata.create_all(engine)
+
+CURRENCY = "XTR"  # IMPORTANT: Stars currency per Telegram docs
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tg_user = update.effective_user
+    with Session() as s:
+        u = s.execute(select(User).where(User.tg_user_id == str(tg_user.id))).scalar_one_or_none()
+        if not u:
+            u = User(tg_user_id=str(tg_user.id), username=tg_user.username or tg_user.full_name,
+                     coins=Config.STARTING_COINS, energy=Config.STARTING_ENERGY)
+            s.add(u)
+            s.commit()
+    text = (
+        "🦈 Welcome to SharkSpin!\n\n"
+        "Spin to win coins. Buy energy with Telegram Stars.\n"
+        "Open the mini app: Menu → Open (or tap /play).\n\n"
+        "Commands:\n"
+        "/play – open mini app\n"
+        "/buy – purchase 100 energy (\U00002B50 {stars} Stars)\n"
+        "/me – show your balance".format(stars=Config.PRODUCT_ENERGY_PACK_AMOUNT_STARS)
+    )
+    await update.message.reply_text(text)
+
+async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    with Session() as s:
+        u = s.execute(select(User).where(User.tg_user_id == str(update.effective_user.id))).scalar_one_or_none()
+        if not u:
+            await update.message.reply_text("Create an account with /start first.")
+            return
+        await update.message.reply_text(f"Coins: {u.coins}\nEnergy: {u.energy}")
+
+async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Simple link to open the Mini App under your bot.
+    # Users can also tap your bot's menu button in Telegram to open the WebApp.
+    await update.message.reply_text("Tap the menu button to open SharkSpin, or open t.me/" + context.bot.username + "/SharkSpin")
+
+async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Send Stars invoice. No provider_token is needed for Stars.
+    title = "Energy Pack"
+    description = f"Buy {Config.PRODUCT_ENERGY_PACK_ENERGY} Energy for spins."
+    payload = Config.PRODUCT_ENERGY_PACK_ID
+    currency = CURRENCY
+    prices = [LabeledPrice(label="Energy Pack", amount=Config.PRODUCT_ENERGY_PACK_AMOUNT_STARS)]  # amount in Stars
+
+    await context.bot.send_invoice(
+        chat_id=update.effective_chat.id,
+        title=title,
+        description=description,
+        payload=payload,
+        provider_token="",  # IMPORTANT for Stars
+        currency=currency,
+        prices=prices,
+    )
+
+async def precheckout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.pre_checkout_query
+    await query.answer(ok=True)
+
+async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    sp = update.message.successful_payment
+    stars_paid = sp.total_amount  # with Stars, amount is in stars (no fractional units)
+    payload = sp.invoice_payload
+    with Session() as s:
+        u = s.execute(select(User).where(User.tg_user_id == str(update.effective_user.id))).scalar_one_or_none()
+        if not u:
+            return
+        # Credit energy
+        u.energy += Config.PRODUCT_ENERGY_PACK_ENERGY
+        # Record payment
+        p = Payment(
+            tg_payment_charge_id=sp.telegram_payment_charge_id,
+            payload=payload,
+            stars_amount=stars_paid,
+            user_id=u.id,
+        )
+        s.add(p)
+        s.commit()
+    await update.message.reply_text(
+        f"✅ Payment received: {stars_paid} ⭐️\nEnergy +{Config.PRODUCT_ENERGY_PACK_ENERGY}. Enjoy spinning!"
+    )
+
+
+def build_app():
+    return Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
+
+
+async def on_webhook(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    return  # placeholder if you route via Flask; otherwise run bot separately.
+
+
+def main_polling():
+    app = build_app()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("me", me))
+    app.add_handler(CommandHandler("play", play))
+    app.add_handler(CommandHandler("buy", buy))
+    app.add_handler(PreCheckoutQueryHandler(precheckout_handler))
+    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
+    app.run_polling(close_loop=False)
+
+if __name__ == "__main__":
+    main_polling()
+
+############################################
+# 8) templates/index.html  (Telegram Mini App UI)
+############################################
+# Note: Keep it simple; you can theme later.
+
+INDEX_HTML = r"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SharkSpin</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🦈 SharkSpin</h1>
+    <div id="stats">
+      <div>Coins: <span id="coins">-</span></div>
+      <div>Energy: <span id="energy">-</span></div>
+    </div>
+    <button id="spinBtn">SPIN</button>
+    <div id="result"></div>
+
+    <div class="shop">
+      <h3>Shop</h3>
+      <button id="buyEnergyBtn">Buy 100 Energy (Stars)</button>
+    </div>
+  </div>
+  <script src="/static/game.js"></script>
+</body>
+</html>
+"""
+
+############################################
+# 9) static/styles.css
+############################################
+STYLES_CSS = r"""
+body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:#0b1220; color:#eef;}
+.wrap{max-width:520px;margin:24px auto;padding:16px;border-radius:16px;background:#121a2b; box-shadow:0 8px 32px rgba(0,0,0,.35)}
+#spinBtn, #buyEnergyBtn{padding:12px 16px;border-radius:12px;border:none;cursor:pointer;margin-top:12px}
+#spinBtn{background:#1f8efa;color:#fff}
+#buyEnergyBtn{background:#ffd600;color:#000}
+#result{margin-top:16px;min-height:24px}
+.shop{margin-top:24px}
+"""
+
+############################################
+# 10) static/game.js (Mini App client)
+############################################
+GAME_JS = r"""
+const tg = window.Telegram?.WebApp;
+let TOKEN = null;
+
+async function postJSON(url, data){
+  const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  return await res.json();
+}
+
+async function getJSON(url){
+  const res = await fetch(url);
+  return await res.json();
+}
+
+async function auth(){
+  const user = tg?.initDataUnsafe?.user;
+  const tg_user_id = user?.id?.toString() || prompt('Enter Test TG ID');
+  const username = user?.username || 'webapp_user';
+  const resp = await postJSON('/api/auth', { tg_user_id, username });
+  if(resp.ok){
+    TOKEN = resp.token;
+    document.getElementById('coins').textContent = resp.coins;
+    document.getElementById('energy').textContent = resp.energy;
+  }
+}
+
+async function refreshMe(){
+  const u = await getJSON('/api/me?token='+encodeURIComponent(TOKEN));
+  if(u.ok){
+    document.getElementById('coins').textContent = u.coins;
+    document.getElementById('energy').textContent = u.energy;
+  }
+}
+
+async function spin(){
+  const r = await postJSON('/api/spin', { token: TOKEN });
+  if(!r.ok){
+    document.getElementById('result').textContent = r.error || 'Error';
+  }else{
+    document.getElementById('result').textContent = `Result: ${r.result} (+${r.payout})`;
+    document.getElementById('coins').textContent = r.coins;
+    document.getElementById('energy').textContent = r.energy;
+  }
+}
+
+async function buyEnergy(){
+  // For best UX, trigger bot command via deep link to send invoice.
+  const url = `https://t.me/${tg?.initDataUnsafe?.receiver?.username || 'YOUR_BOT_USERNAME'}?start=buy`; // replace fallback
+  if(tg?.openTelegramLink){ tg.openTelegramLink(url); } else { window.open(url, '_blank'); }
+}
+
+window.addEventListener('DOMContentLoaded', () =>{
+  document.getElementById('spinBtn').addEventListener('click', spin);
+  document.getElementById('buyEnergyBtn').addEventListener('click', buyEnergy);
+  auth();
+  if(tg){ tg.expand(); }
+});
+"""
+
+############################################
+# 11) PythonAnywhere notes (deploy)
+############################################
+# 1) Create a virtualenv and install requirements.
+# 2) Set up a Flask web app (WSGI) pointing to 'app:app'.
+# 3) Run the bot in a separate task (always-on task) OR set webhook to route updates to '/bot/webhook' served by Flask.
+#    (Polling is fine for testing locally; on PythonAnywhere, webhooks or a scheduled task is recommended.)
+# 4) Set environment vars in PythonAnywhere dashboard:
+#    SECRET_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_URL (if using webhooks), DATABASE_URL
+#    PRODUCT_ENERGY_PACK_AMOUNT_STARS, PRODUCT_ENERGY_PACK_ENERGY
+# 5) Configure your bot commands: /start, /me, /play, /buy
+# 6) In @BotFather → Bot Settings → Configure WebApp → Add your Mini App URL (index). Enable Stars payments.
+
+############################################
+# 12) Security & Integrity
+############################################
+# - Validate Telegram WebApp initData signature (HMAC with bot token). For brevity, we used a local signer.
+#   See: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+# - For payments, currency MUST be "XTR" (Stars) and provider_token must be empty.
+# - Do NOT trust client; re-check balance server-side before applying spins/upgrades.
+
+############################################
+# 13) Quickstart local runner (optional)
+############################################
+if __name__ == "__main__":
+    # Writes template/static files if running as a single file script for demo
+    import os
+    os.makedirs("templates", exist_ok=True)
+    os.makedirs("static", exist_ok=True)
+    with open("templates/index.html", "w", encoding="utf-8") as f: f.write(INDEX_HTML)
+    with open("static/styles.css", "w", encoding="utf-8") as f: f.write(STYLES_CSS)
+    with open("static/game.js", "w", encoding="utf-8") as f: f.write(GAME_JS)
+    print("Scaffold written. Run: python bot.py in one terminal, and: waitress-serve --port=8000 app:app in another.")
