@@ -8,60 +8,134 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <header class="hero">
-      <h1>🦈 SharkSpin</h1>
-      <p class="tagline">Dive into the arcade reef and spin your way to fortune.</p>
+  <div class="app-shell">
+    <header class="masthead">
+      <div class="hero">
+        <img src="/static/images/hero-shark.svg" alt="SharkSpin" class="hero-art" />
+        <div class="hero-copy">
+          <h1>SharkSpin Command Deck</h1>
+          <p>Dive into the slot bay, charge the Wheel of Tides, and manage your crew without leaving the mini app.</p>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="label">Level</span>
+          <span class="value" id="level">1</span>
+          <div class="progress-wrap">
+            <progress id="levelProgress" max="100" value="0"></progress>
+            <small id="progressDetail">0 / 0 XP</small>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="label">SharkCoins</span>
+          <span class="value" id="coins">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Energy</span>
+          <span class="value" id="energy">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Wheel Tokens</span>
+          <span class="value" id="wheelTokens">0</span>
+        </div>
+      </div>
     </header>
 
-    <section class="panel stats">
-      <div class="stat"><span class="label">Level</span><span id="level">1</span></div>
-      <div class="stat"><span class="label">SharkCoins</span><span id="coins">0</span></div>
-      <div class="stat"><span class="label">Energy</span><span id="energy">0</span></div>
-      <div class="stat"><span class="label">Wheel Tokens</span><span id="wheelTokens">0</span></div>
-    </section>
-
-    <section class="panel main-slot">
-      <h2>Main Spin</h2>
-      <div class="reel-container" id="slotReels">
-        <div class="reel" id="reel1">🦈</div>
-        <div class="reel" id="reel2">💎</div>
-        <div class="reel" id="reel3">🍋</div>
+    <section class="daily-card" id="dailyCard">
+      <div class="daily-copy">
+        <img src="/static/images/daily-chest.svg" alt="Daily reward" />
+        <div>
+          <h2>Daily Captain's Log</h2>
+          <p id="dailySummary">Claim your reward to keep the streak alive.</p>
+          <div class="daily-details" id="dailyDetails"></div>
+        </div>
       </div>
-      <div class="multiplier-buttons">
-        <button class="multiplier-btn active" data-mult="1">x1</button>
-        <button class="multiplier-btn" data-mult="2">x2</button>
-        <button class="multiplier-btn" data-mult="3">x3</button>
-        <button class="multiplier-btn" data-mult="5">x5</button>
-      </div>
-      <button id="spinBtn" class="primary">Spin the Reef 🎰</button>
-      <div id="result" class="result"></div>
+      <button id="claimDailyBtn" class="primary">Claim Reward</button>
     </section>
 
-    <section class="panel wheel" id="wheelSection">
-      <h2>Wheel of Tides</h2>
-      <div class="wheel-pointer"></div>
-      <div class="wheel-wrapper">
-        <div class="fortune-wheel" id="fortuneWheel"></div>
-      </div>
-      <button id="wheelSpinBtn" class="secondary">Spin Wheel of Fortune</button>
-      <div id="wheelMessage" class="result"></div>
-    </section>
+    <main class="content">
+      <section class="view active" data-view="main">
+        <div class="panel slot-panel">
+          <header class="panel-header">
+            <h2>Main Spin Bay</h2>
+            <p>Set your wager multiplier and send the reels roaring.</p>
+          </header>
+          <div class="slot-stage">
+            <div class="slot-frame">
+              <div class="slot-topper"></div>
+              <div class="slot-body">
+                <div class="slot-lights"></div>
+                <div class="reel-container" id="slotReels">
+                  <div class="reel" id="reel1">🪙</div>
+                  <div class="reel" id="reel2">⚡</div>
+                  <div class="reel" id="reel3">🌀</div>
+                </div>
+              </div>
+              <div class="slot-base"></div>
+            </div>
+          </div>
+          <div class="multiplier-buttons">
+            <button class="chip active" data-mult="1">x1</button>
+            <button class="chip" data-mult="2">x2</button>
+            <button class="chip" data-mult="3">x3</button>
+            <button class="chip" data-mult="5">x5</button>
+          </div>
+          <div class="slot-actions">
+            <button id="spinBtn" class="primary large">Spin the Main Cab 🎰</button>
+            <div id="result" class="result"></div>
+          </div>
+        </div>
 
-    <section class="panel events" id="eventsSection">
-      <h2>Live Events</h2>
-      <div id="eventsList" class="events-list"></div>
-    </section>
+        <div class="panel callouts-panel">
+          <h2>Operations Briefing</h2>
+          <div id="calloutsGrid" class="callouts-grid"></div>
+        </div>
 
-    <section class="panel stickers" id="stickersSection">
-      <h2>Sticker Albums</h2>
-      <div id="albumsList" class="albums"></div>
-    </section>
+        <div class="panel events-panel">
+          <h2>Live Events</h2>
+          <div id="eventsList" class="events-list"></div>
+        </div>
+      </section>
 
-    <section class="panel shop">
-      <h2>Shop</h2>
-      <button id="buyEnergyBtn" class="secondary">Buy 100 Energy (⭐ Stars)</button>
-    </section>
+      <section class="view" data-view="wheel">
+        <div class="panel wheel-panel" id="wheelSection">
+          <h2>Wheel of Tides</h2>
+          <div class="wheel-stage">
+            <div class="wheel-glow"></div>
+            <div class="wheel-frame"></div>
+            <div class="fortune-wheel" id="fortuneWheel"></div>
+            <div class="wheel-center"></div>
+            <div class="wheel-pointer"></div>
+          </div>
+          <button id="wheelSpinBtn" class="primary">Spin the Wheel</button>
+          <div id="wheelMessage" class="result"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="albums">
+        <div class="panel">
+          <h2>Sticker Albums</h2>
+          <div id="albumsList" class="albums"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="shop">
+        <div class="panel shop-panel">
+          <h2>Star Shop</h2>
+          <p class="panel-subtitle">Purchase Star bundles without leaving the web app.</p>
+          <div id="shopList" class="shop-grid"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="help">
+        <div class="panel help-panel">
+          <h2>Captain's Handbook</h2>
+          <div id="guideSections" class="guide-sections"></div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="taskbar" id="taskbar"></nav>
   </div>
   <script src="/static/game.js"></script>
 </body>
