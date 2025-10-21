@@ -31,8 +31,6 @@ engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, future=True)
 Session = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 Base.metadata.create_all(engine)
 
-CURRENCY = "XTR"  # IMPORTANT: Stars currency per Telegram docs
-
 reward_signer = URLSafeSerializer(Config.SECRET_KEY, salt="sharkspin:reward")
 ADMIN_ID = "1821897182"  # your Telegram user_id — replace with yours
 
@@ -115,23 +113,19 @@ async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot_username = (await context.bot.get_me()).username
     url = f"https://t.me/{bot_username}/startapp?startapp=redeem_{token}"
 
-    # ✅ Use MarkdownV2 and escape special characters
-    safe_url = url.replace("-", "\\-").replace("_", "\\_").replace(".", "\\.").replace("=", "\\=")
-    msg = (
-        f"🎁 *Reward Created!*\n"
-        f"Type: `{rtype}`\n"
-        f"Amount: `{amount}`\n"
-        f"Uses: `{uses}`\n\n"
-        f"[👉 Claim Here via Mini App]({safe_url})"
+    markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("🎁 Open reward in SharkSpin", url=url)]]
     )
 
-    try:
-        await update.message.reply_text(msg, parse_mode="MarkdownV2", disable_web_page_preview=True)
-    except Exception as e:
-        log.error(f"Error sending reward message: {e}")
-        await update.message.reply_text(
-            f"🎁 Reward created!\n\nType: {rtype}\nAmount: {amount}\nUses: {uses}\n\nLink:\n{url}"
-        )
+    summary = (
+        "🎁 Reward Created!\n"
+        f"Type: {rtype}\n"
+        f"Amount: {amount}\n"
+        f"Uses: {uses}\n\n"
+        "Tap the button below to launch the mini app and auto-apply the grant."
+    )
+
+    await update.message.reply_text(summary, reply_markup=markup, disable_web_page_preview=True)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -155,8 +149,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = (
         "🦈 Welcome to SharkSpin!\n\n"
-        "Spin to win coins. Buy energy with Telegram Stars.\n"
-        "Open the mini app: Menu → Open (or tap /play).\n\n"
+        "Every spin, shop item, album, and leaderboard now lives inside the mini app interface.\n"
+        "Launch it below whenever you need to manage rewards or explore updates.\n\n"
         "Commands:\n"
         "/play – open mini app\n"
         "/buy – Star shop menu\n"
@@ -171,16 +165,10 @@ async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not u:
             await update.message.reply_text("Create an account with /start first.")
             return
-        await update.message.reply_text(f"Coins: {u.coins}\nEnergy: {u.energy}")
-
-
-async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = "https://game-tofumochi.pythonanywhere.com"
-    kb = [[KeyboardButton("🎮 Open SharkSpin", web_app=WebAppInfo(url=url))]]
-    await update.message.reply_text(
-        "Tap below to open SharkSpin:",
-        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True)
-    )
+        await update.message.reply_text(
+            f"Coins: {u.coins}\nEnergy: {u.energy}",
+            reply_markup=build_webapp_markup("Open SharkSpin"),
+        )
 
 
 async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -290,7 +278,6 @@ def main_polling():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reward", reward))
     app.add_handler(CommandHandler("me", me))
-    app.add_handler(CommandHandler("play", play))
     app.add_handler(CommandHandler("buy", buy))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(PreCheckoutQueryHandler(precheckout_handler))

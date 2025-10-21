@@ -18,6 +18,12 @@ from models import (
 SYMBOLS: Sequence[str] = ("🦈", "💎", "🪙", "🍋", "🎲", "🔱")
 SYMBOL_WEIGHTS: Sequence[float] = (0.24, 0.16, 0.16, 0.22, 0.17, 0.05)
 
+SYMBOLS: Sequence[str] = tuple(sym for sym, _, _ in SYMBOL_DEFINITIONS)
+SYMBOL_WEIGHTS: Sequence[float] = tuple(weight for _, weight, _ in SYMBOL_DEFINITIONS)
+SYMBOL_REWARD_BASE: Dict[str, Dict[str, int]] = {
+    sym: base for sym, _, base in SYMBOL_DEFINITIONS
+}
+SHARK_SYMBOL = "🦈"
 
 # --- Slot Machine Logic ----------------------------------------------------
 

@@ -10,6 +10,9 @@ class Config:
     )
     SQLALCHEMY_ECHO = False
 
+    # Web experience
+    WEBAPP_URL = os.getenv("WEBAPP_URL", "https://game-tofumochi.pythonanywhere.com")
+
     # Telegram
     TELEGRAM_BOT_TOKEN = os.getenv(
         "TELEGRAM_BOT_TOKEN", "8220458714:AAHJeibywqHXQf1bJp0bQbvjpEO0gaLhQOM"

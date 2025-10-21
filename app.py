@@ -64,7 +64,9 @@ def index():
 def generate_reward_link(amount: int = 100, type_: str = "coins") -> str:
     payload = {"type": type_, "amount": amount}
     token = reward_signer.dumps(payload)
-    return f"https://game-tofumochi.pythonanywhere.com/redeem/{token}"
+    base_url = Config.WEBAPP_URL.rstrip("/")
+    return f"{base_url}/redeem/{token}"
+
 
 
 @app.get("/redeem/<token>")
