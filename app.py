@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict
 
-from flask import Flask, abort, jsonify, render_template, request
+from flask import Flask, jsonify, request, render_template, abort
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, sessionmaker
 from itsdangerous import URLSafeSerializer, BadSignature
@@ -22,7 +22,6 @@ from models import (
 )
 from game_logic import (
     apply_spin,
-    calculate_level_progress,
     complete_album,
     ensure_default_albums,
     ensure_default_wheel_rewards,
@@ -30,10 +29,8 @@ from game_logic import (
     grant_sticker,
     pull_sticker,
     record_event_spin,
-    resolve_level_rewards,
     serialize_event,
     spin_wheel,
-    trade_stickers_for_reward,
 )
 
 from sqlalchemy import create_engine
@@ -104,10 +101,6 @@ def redeem_reward(token):
             user.energy += rl.amount
         elif rl.reward_type == "spins":
             user.energy += rl.amount * Config.ENERGY_PER_SPIN
-        elif rl.reward_type == "wheel_tokens":
-            user.wheel_tokens += rl.amount
-        elif rl.reward_type == "sticker_pack":
-            user.free_sticker_packs += rl.amount
         else:
             return render_template("redeem.html", message="❌ Invalid reward type.")
 
@@ -156,74 +149,15 @@ def api_auth():
         return jsonify(payload)
 
 
-def _level_summary(user: User) -> Dict[str, Any]:
-    info = calculate_level_progress(user.xp)
-    reward_preview = Config.LEVEL_REWARDS.get(info["next_level"])
-    return {
-        **info,
-        "reward_preview": reward_preview,
-        "claimed_upto": user.level_reward_checkpoint,
-    }
-
-
-def _daily_reward_for_day(day: int) -> Dict[str, Any]:
-    coins = Config.DAILY_REWARD_BASE_COINS + max(day - 1, 0) * 15
-    energy = Config.DAILY_REWARD_BASE_ENERGY
-    bonus_energy = Config.DAILY_STREAK_BONUS if day % 7 == 0 else 0
-    wheel_tokens = 1 if day % 7 == 0 else 0
-    sticker_packs = 1 if day % 7 == 0 else 0
-    return {
-        "day": day,
-        "coins": coins,
-        "energy": energy,
-        "bonus_energy": bonus_energy,
-        "wheel_tokens": wheel_tokens,
-        "sticker_packs": sticker_packs,
-    }
-
-
-def _daily_summary(user: User) -> Dict[str, Any]:
-    now = datetime.utcnow()
-    next_reset = None
-    can_claim = True
-    if user.last_daily_claim_at:
-        elapsed = now - user.last_daily_claim_at
-        if elapsed < timedelta(hours=20):
-            can_claim = False
-            next_reset = (user.last_daily_claim_at + timedelta(hours=20)).isoformat()
-    next_day = user.daily_streak + 1
-    reward = _daily_reward_for_day(next_day)
-    next_reward = _daily_reward_for_day(next_day + 1)
-    milestones = []
-    for day in Config.DAILY_MILESTONES:
-        info = _daily_reward_for_day(day)
-        info["achieved"] = user.daily_streak >= day
-        info["upcoming"] = next_day == day
-        milestones.append(info)
-    return {
-        "streak": user.daily_streak,
-        "can_claim": can_claim,
-        "next_available_at": next_reset,
-        "reward": reward,
-        "next_reward": next_reward,
-        "milestones": milestones,
-    }
-
-
 def serialize_user_state(user: User) -> Dict[str, Any]:
     return {
         "coins": user.coins,
         "energy": user.energy,
         "level": user.level,
-        "xp": user.xp,
-        "lifetime_spins": user.lifetime_spins,
         "wheel_tokens": user.wheel_tokens,
-        "free_sticker_packs": user.free_sticker_packs,
         "last_wheel_spin_at": user.last_wheel_spin_at.isoformat()
         if user.last_wheel_spin_at
         else None,
-        "daily": _daily_summary(user),
-        "level_summary": _level_summary(user),
     }
 
 
@@ -247,20 +181,17 @@ def api_spin():
         abort(401)
     with Session() as s:
         user = s.merge(user)
-        previous_level = user.level
         ok, msg, payout, result_data = apply_spin(user, multiplier=multiplier)
         if not ok:
             return jsonify({"ok": False, "error": msg}), 200
         rec = Spin(user_id=user.id, delta_coins=payout, result=result_data["label"])
         s.add(rec)
         record_event_spin(s, user, multiplier)
-        level_rewards = resolve_level_rewards(s, user, previous_level)
         s.commit()
         response = {
             "ok": True,
             "payout": payout,
             "result": result_data,
-            "level_rewards": level_rewards,
         }
         response.update(serialize_user_state(user))
         return jsonify(response)
@@ -365,17 +296,6 @@ def api_stickers():
             ac.album_id for ac in s.query(AlbumCompletion).filter(AlbumCompletion.user_id == user.id)
         }
         payload = []
-        album_themes = {
-            "ocean-legends": {
-                "accent": "#00c2ff",
-                "background": "/static/images/album-ocean.svg",
-            },
-            "sky-voyagers": {
-                "accent": "#f48bff",
-                "background": "/static/images/album-sky.svg",
-            },
-        }
-
         for album in albums:
             stickers = []
             owned = 0
@@ -390,7 +310,6 @@ def api_stickers():
                         "name": sticker.name,
                         "rarity": sticker.rarity,
                         "quantity": qty,
-                        "image_url": sticker.image_url,
                     }
                 )
             payload.append(
@@ -405,31 +324,9 @@ def api_stickers():
                     "owned_count": owned,
                     "total": len(album.stickers),
                     "reward_claimed": album.id in completions,
-                    "theme": album_themes.get(
-                        album.slug,
-                        {"accent": "#3dd5ff", "background": "/static/images/album-ocean.svg"},
-                    ),
                 }
             )
-        duplicates = sum(
-            max(us.quantity - 1, 0)
-            for us in s.query(UserSticker).filter(UserSticker.user_id == user.id)
-        )
-        trade_sets = duplicates // Config.STICKER_TRADE_SET_SIZE if Config.STICKER_TRADE_SET_SIZE else 0
-        return jsonify(
-            {
-                "ok": True,
-                "albums": payload,
-                "duplicates": duplicates,
-                "trade": {
-                    "set_size": Config.STICKER_TRADE_SET_SIZE,
-                    "coins": Config.STICKER_TRADE_COINS,
-                    "energy": Config.STICKER_TRADE_ENERGY,
-                    "sets_available": trade_sets,
-                },
-                **serialize_user_state(user),
-            }
-        )
+        return jsonify({"ok": True, "albums": payload, **serialize_user_state(user)})
 
 
 @app.post("/api/stickers/open")
@@ -446,13 +343,10 @@ def api_open_sticker_pack():
         album = s.get(StickerAlbum, album_id)
         if not album:
             return jsonify({"ok": False, "error": "Album not found"}), 200
-        if user.free_sticker_packs > 0:
-            user.free_sticker_packs -= 1
-        elif user.coins >= album.sticker_cost:
-            user.coins -= album.sticker_cost
-        else:
-            return jsonify({"ok": False, "error": "Not enough SharkCoins or pack tokens"}), 200
+        if user.coins < album.sticker_cost:
+            return jsonify({"ok": False, "error": "Not enough SharkCoins"}), 200
 
+        user.coins -= album.sticker_cost
         selected = pull_sticker(s, user, album)
         sticker_info = grant_sticker(s, user, selected)
         s.flush()
@@ -478,28 +372,6 @@ def api_open_sticker_pack():
         return jsonify(response)
 
 
-@app.post("/api/stickers/trade")
-def api_trade_stickers():
-    payload = request.get_json(force=True)
-    token = payload.get("token")
-    reward_type = payload.get("reward_type", "coins")
-    sets = int(payload.get("sets", 1))
-    user = _get_user_from_token(token)
-    if not user:
-        abort(401)
-
-    with Session() as s:
-        user = s.merge(user)
-        ok, msg, reward_payload = trade_stickers_for_reward(s, user, reward_type, sets)
-        if not ok:
-            s.rollback()
-            return jsonify({"ok": False, "error": msg}), 200
-        s.commit()
-        response = {"ok": True, "reward": reward_payload, "message": msg}
-        response.update(serialize_user_state(user))
-        return jsonify(response)
-
-
 @app.get("/api/events")
 def api_events():
     token = request.args.get("token")
@@ -517,272 +389,6 @@ def api_events():
         }
         payload = [serialize_event(evt, progress_map.get(evt.id)) for evt in events]
         return jsonify({"ok": True, "events": payload, **serialize_user_state(user)})
-
-
-@app.get("/api/daily")
-def api_daily_overview():
-    token = request.args.get("token")
-    user = _get_user_from_token(token)
-    if not user:
-        abort(401)
-    return jsonify({"ok": True, "daily": _daily_summary(user), **serialize_user_state(user)})
-
-
-@app.post("/api/daily/claim")
-def api_daily_claim():
-    payload = request.get_json(force=True)
-    token = payload.get("token")
-    user = _get_user_from_token(token)
-    if not user:
-        abort(401)
-
-    now = datetime.utcnow()
-    with Session() as s:
-        user = s.merge(user)
-        if user.last_daily_claim_at and now - user.last_daily_claim_at < timedelta(hours=20):
-            return jsonify({"ok": False, "error": "Daily reward not ready yet"}), 200
-
-        if user.last_daily_claim_at and now - user.last_daily_claim_at > timedelta(hours=36):
-            user.daily_streak = 0
-
-        user.daily_streak += 1
-        user.last_daily_claim_at = now
-
-        reward = _daily_reward_for_day(user.daily_streak)
-        user.coins += reward["coins"]
-        user.energy += reward["energy"]
-        streak_bonus = reward["bonus_energy"]
-        if streak_bonus:
-            user.energy += streak_bonus
-        if reward["wheel_tokens"]:
-            user.wheel_tokens += reward["wheel_tokens"]
-        if reward["sticker_packs"]:
-            user.free_sticker_packs += reward["sticker_packs"]
-
-        s.commit()
-        payload = {
-            "ok": True,
-            "reward": reward,
-            "streak_bonus": streak_bonus,
-        }
-        payload.update(serialize_user_state(user))
-        return jsonify(payload)
-
-
-@app.get("/api/leaderboard")
-def api_leaderboard():
-    token = request.args.get("token")
-    user = _get_user_from_token(token)
-    if not user:
-        abort(401)
-
-    with Session() as s:
-        top_coins = (
-            s.query(User.username, User.coins, User.level)
-            .order_by(User.coins.desc())
-            .limit(Config.LEADERBOARD_SIZE)
-            .all()
-        )
-        top_xp = (
-            s.query(User.username, User.xp, User.level)
-            .order_by(User.xp.desc())
-            .limit(Config.LEADERBOARD_SIZE)
-            .all()
-        )
-        leaderboard = {
-            "coins": [
-                {"username": name or "Player", "coins": coins, "level": level}
-                for name, coins, level in top_coins
-            ],
-            "xp": [
-                {"username": name or "Player", "xp": xp, "level": level}
-                for name, xp, level in top_xp
-            ],
-        }
-        return jsonify({"ok": True, "leaderboard": leaderboard, **serialize_user_state(user)})
-
-
-@app.get("/api/store")
-def api_store():
-    token = request.args.get("token")
-    user = _get_user_from_token(token)
-    if not user:
-        abort(401)
-
-    return jsonify({"ok": True, "star_packages": Config.STAR_PACKAGES, **serialize_user_state(user)})
-
-
-@app.get("/api/glossary")
-def api_glossary():
-    token = request.args.get("token")
-    user = _get_user_from_token(token)
-    if not user:
-        abort(401)
-
-    glossary = [
-        {
-            "title": "Spins",
-            "emoji": "🎰",
-            "body": "Spend energy to fire the SharkSlot and earn SharkCoins + XP.",
-            "details": [
-                "Each multiplier adds the same energy cost but multiplies wins.",
-                "Big wins trigger neon celebrations and boost level progress.",
-                "Every spin records lifetime stats that appear on the leaderboard.",
-            ],
-            "image_url": "/static/images/info-spins.svg",
-        },
-        {
-            "title": "Wheel of Tides",
-            "emoji": "🌀",
-            "body": "Use wheel tokens or cooldown spins to land jackpots, energy bursts, or sticker packs.",
-            "details": [
-                "A free spin unlocks every {hours} hours.".format(hours=Config.WHEEL_COOLDOWN_HOURS),
-                "Tokens drop from level rewards, albums, and daily streak milestones.",
-                "Every spin is logged so admins can audit wins via the database.",
-            ],
-            "image_url": "/static/images/info-wheel.svg",
-        },
-        {
-            "title": "Sticker Albums",
-            "emoji": "📔",
-            "body": "Complete themed sticker sets to bank bonus spins and energy reserves.",
-            "details": [
-                "Ocean Legends and Sky Voyagers each feature unique art pieces.",
-                "Duplicate stickers can be recycled for coins or energy trades.",
-                "Album progress is saved forever—finishing re-activates rewards automatically.",
-            ],
-            "image_url": "/static/images/info-album.svg",
-        },
-        {
-            "title": "Sticker Trades",
-            "emoji": "🔁",
-            "body": "Five duplicate stickers form a trade set that can be swapped for currency boosts.",
-            "details": [
-                f"Each set pays {Config.STICKER_TRADE_COINS} SharkCoins or {Config.STICKER_TRADE_ENERGY} Energy.",
-                "Trades never consume your final copy—only extras beyond one of each design.",
-                "Batch trades are supported from the mini app UI and admin endpoints.",
-            ],
-            "image_url": "/static/images/info-trade.svg",
-        },
-        {
-            "title": "Energy",
-            "emoji": "⚡",
-            "body": "Energy fuels spins, wheel rewards, and album unlocks.",
-            "details": [
-                "Regenerates via daily streaks, level rewards, events, and Star Shop bundles.",
-                "Wheel rewards labelled as spins convert to direct energy boosts.",
-                "Admins can grant energy directly using reward links for support cases.",
-            ],
-            "image_url": "/static/images/info-energy.svg",
-        },
-        {
-            "title": "SharkCoins",
-            "emoji": "🪙",
-            "body": "Primary currency for sticker packs, upgrades, and bragging rights.",
-            "details": [
-                "Earn coins from slots, wheel rewards, album completions, and trades.",
-                "Leaderboard rankings showcase the richest divers in the reef.",
-                "Admins can issue coin grants via /reward or the REST reward-link endpoint.",
-            ],
-            "image_url": "/static/images/info-coins.svg",
-        },
-        {
-            "title": "Daily Streaks",
-            "emoji": "📅",
-            "body": "Log in every 20 hours to keep your streak alive and supercharge payouts.",
-            "details": [
-                "Seven-day streaks unlock bonus energy, wheel tokens, and sticker packs.",
-                "Missing 36 hours resets progress—admins can reset manually for support.",
-                "Upcoming milestone rewards are previewed inside the mini app daily card.",
-            ],
-            "image_url": "/static/images/info-daily.svg",
-        },
-        {
-            "title": "Level Rewards",
-            "emoji": "📈",
-            "body": "XP from spins levels you up and unlocks milestone prize crates.",
-            "details": [
-                "Rewards include coins, energy, wheel tokens, spins, and legendary stickers.",
-                "Level progress is visualized with neon progress bars and reward previews.",
-                "Admins can inspect thresholds in config.py or award XP manually via SQL.",
-            ],
-            "image_url": "/static/images/info-level.svg",
-        },
-        {
-            "title": "Leaderboards",
-            "emoji": "🏆",
-            "body": "Separate boards track top SharkCoins and XP divers in real time.",
-            "details": [
-                "Updated after every spin, wheel win, and album completion.",
-                "Entries display usernames, holdings, and current level for context.",
-                "Admins can extend leaderboard size via `LEADERBOARD_SIZE`.",
-            ],
-            "image_url": "/static/images/info-leaderboard.svg",
-        },
-        {
-            "title": "Star Shop",
-            "emoji": "⭐",
-            "body": "Purchase energy + wheel bundles using Telegram Stars with instant delivery.",
-            "details": [
-                "Five themed packs range from Coral Splash to Titan Storm.",
-                "Invoices are issued via the bot `/buy` command or inline keyboard.",
-                "Successful payments log entries in the payments table for audits.",
-            ],
-            "image_url": "/static/images/info-starshop.svg",
-        },
-    ]
-
-    return jsonify({"ok": True, "glossary": glossary, **serialize_user_state(user)})
-
-
-@app.post("/api/admin/reward-link")
-def api_admin_reward_link():
-    payload = request.get_json(force=True)
-    admin_secret = payload.get("admin_secret")
-    if admin_secret != Config.ADMIN_SECRET:
-        abort(403)
-
-    reward_type = payload.get("reward_type", "coins")
-    amount = int(payload.get("amount", 100))
-    uses = int(payload.get("uses", 1))
-    creator = payload.get("created_by", "api")
-
-    token = reward_signer.dumps({"type": reward_type, "amount": amount})
-
-    with Session() as s:
-        existing = (
-            s.execute(select(RewardLink).where(RewardLink.token == token)).scalar_one_or_none()
-        )
-        if existing:
-            reward_link = existing
-            reward_link.reward_type = reward_type
-            reward_link.amount = amount
-            reward_link.uses_left = uses
-            reward_link.is_active = True
-            reward_link.created_by = creator
-        else:
-            reward_link = RewardLink(
-                token=token,
-                reward_type=reward_type,
-                amount=amount,
-                uses_left=uses,
-                created_by=creator,
-            )
-            s.add(reward_link)
-        s.commit()
-
-    bot_username = payload.get("bot_username", "sharkspin_bot")
-    url = f"https://t.me/{bot_username}/startapp?startapp=redeem_{token}"
-    summary = f"+{amount} {reward_type.replace('_', ' ')}"
-    return jsonify(
-        {
-            "ok": True,
-            "token": token,
-            "reward_url": url,
-            "uses": uses,
-            "summary": summary,
-        }
-    )
 
 
 if __name__ == "__main__":

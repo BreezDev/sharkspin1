@@ -26,12 +26,6 @@ class User(Base):
     total_earned = Column(Integer, default=0)
     wheel_tokens = Column(Integer, default=0)
     last_wheel_spin_at = Column(DateTime)
-    xp = Column(Integer, default=0)
-    daily_streak = Column(Integer, default=0)
-    last_daily_claim_at = Column(DateTime)
-    level_reward_checkpoint = Column(Integer, default=1)
-    lifetime_spins = Column(Integer, default=0)
-    free_sticker_packs = Column(Integer, default=0)
 
 class Spin(Base):
     __tablename__ = "spins"
@@ -102,7 +96,6 @@ class Sticker(Base):
     name = Column(String, nullable=False)
     rarity = Column(String, default="common")
     weight = Column(Float, default=1.0)
-    image_url = Column(String, default="")
 
     album = relationship("StickerAlbum", backref="stickers")
 

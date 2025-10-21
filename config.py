@@ -53,6 +53,11 @@ class Config:
     # Leaderboard
     LEADERBOARD_SIZE = int(os.getenv("LEADERBOARD_SIZE", 25))
 
+    # Wheel of fortune
+    DAILY_FREE_WHEEL_SPINS = int(os.getenv("DAILY_FREE_WHEEL_SPINS", 1))
+    WHEEL_COOLDOWN_HOURS = int(os.getenv("WHEEL_COOLDOWN_HOURS", 4))
+    WHEEL_TOKEN_COST = int(os.getenv("WHEEL_TOKEN_COST", 1))
+
     # Payments (Stars / XTR)
     STAR_PACKAGES = [
         {
