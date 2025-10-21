@@ -1,0 +1,18 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ac4ff" />
+      <stop offset="100%" stop-color="#0a1a40" />
+    </linearGradient>
+    <linearGradient id="penguin" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#d0e6ff" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="26" fill="url(#sky2)" />
+  <path d="M54 120 C50 100 58 78 76 64 C88 54 110 54 122 60 C120 76 116 86 112 96 C120 98 128 104 132 114 C120 110 110 112 100 118 C92 126 82 132 72 134 L78 116 C68 120 60 122 54 120Z" fill="url(#penguin)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="4" />
+  <circle cx="106" cy="80" r="6" fill="#13223c" />
+  <circle cx="104" cy="78" r="2.5" fill="#ffffff" />
+  <path d="M70 124 L64 144 L80 134 Z" fill="#ff9f43" />
+  <path d="M118 96 L130 88 L128 104 Z" fill="#ff7559" />
+</svg>

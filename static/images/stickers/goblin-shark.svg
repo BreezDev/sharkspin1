@@ -1,0 +1,17 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goblinWater" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#32006b" />
+      <stop offset="100%" stop-color="#070017" />
+    </linearGradient>
+    <linearGradient id="goblinBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffa8c9" />
+      <stop offset="100%" stop-color="#ff6fb0" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="26" fill="url(#goblinWater)" />
+  <path d="M20 92 C30 54 70 36 118 46 C134 34 146 28 152 28 C150 44 140 58 124 66 C138 70 150 84 152 96 C130 88 114 90 94 106 C78 118 58 138 38 144 L46 116 C28 122 16 112 18 100 Z" fill="url(#goblinBody)" stroke="#ffd4e8" stroke-opacity="0.5" stroke-width="4" />
+  <path d="M84 72 L124 58 L104 86 Z" fill="#ffe4f2" opacity="0.6" />
+  <circle cx="116" cy="70" r="6" fill="#360027" />
+  <circle cx="114" cy="68" r="2.5" fill="#ffeef6" />
+</svg>

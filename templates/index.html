@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,35 +9,219 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>🦈 SharkSpin</h1>
+    <header class="hero">
+      <img class="hero-bubbles" src="/static/images/bg-bubbles.svg" alt="Glow bubbles" />
+      <img class="hero-bubbles-alt" src="/static/images/bg-bubbles.svg" alt="Bubbles" />
+      <div class="hero-art">
+        <img src="/static/images/hero-shark.svg" alt="Neon shark" />
+        <img class="hero-orbit" src="/static/images/star-pack-orbit.svg" alt="Orbit aura" />
+        <img class="hero-lumina" src="/static/images/star-pack-lumina.svg" alt="Lumina aura" />
+      </div>
+      <div class="hero-copy">
+        <h1>🦈 SharkSpin: Wheel of Tides</h1>
+        <p class="tagline">Spin dazzling reels, complete sticker voyages, and lead the reef in daily regattas!</p>
+        <div class="hero-mini-stats">
+          <div class="mini-stat">
+            <span>🪙 Coins</span>
+            <strong id="coins">0</strong>
+          </div>
+          <div class="mini-stat">
+            <span>⚡ Energy</span>
+            <strong id="energy">0</strong>
+          </div>
+          <div class="mini-stat">
+            <span>🎡 Wheel Tokens</span>
+            <strong id="wheelTokens">0</strong>
+          </div>
+          <div class="mini-stat">
+            <span>🎟️ Pack Tokens</span>
+            <strong id="packTokens">0</strong>
+          </div>
+        </div>
+        <div class="hero-floating">
+          <span>🌊</span>
+          <span>🪙</span>
+          <span>⚡</span>
+          <span>🎰</span>
+          <span>📔</span>
+          <span>🌀</span>
+          <span>🏆</span>
+          <span>⭐</span>
+        </div>
+      </div>
+    </header>
 
-    <div id="stats">
-      <div>Level: <span id="level">1</span></div>
-      <div>SharkCoins: <span id="coins">0</span></div>
-      <div>Energy: <span id="energy">0</span></div>
-    </div>
+    <section class="panel stats">
+      <div class="level-progress">
+        <div class="level-header">
+          <h2>📈 Level <span id="level">1</span></h2>
+          <span id="levelRewardPreview" class="reward-preview">Next reward: —</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-inner" id="levelProgressBar"></div>
+        </div>
+        <div class="progress-meta">
+          <span id="levelProgressText">0 / 0 XP</span>
+          <span id="lifetimeSpins">0 lifetime spins</span>
+        </div>
+        <div class="level-preview-card" id="levelRewardCard">
+          <img src="/static/images/icon-mystery.svg" alt="Reward icon" id="levelRewardIcon" />
+          <div>
+            <h4 id="levelRewardTitle">Mystery Reward Incoming</h4>
+            <p id="levelRewardDetail">Keep spinning to reveal the next milestone.</p>
+          </div>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span class="emoji">💰</span>
+          <div>
+            <h3>SharkCoins</h3>
+            <p id="coinsStat">0</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="emoji">⚡</span>
+          <div>
+            <h3>Energy</h3>
+            <p id="energyStat">0</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="emoji">🌀</span>
+          <div>
+            <h3>Wheel Tokens</h3>
+            <p id="wheelStat">0</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="emoji">🎁</span>
+          <div>
+            <h3>Daily Streak</h3>
+            <p id="dailyStreak">0 days</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <div class="reel-container">
-      <div id="reel1" class="reel">🦈</div>
-      <div id="reel2" class="reel">💎</div>
-      <div id="reel3" class="reel">🍋</div>
-    </div>
+    <section class="panel daily" id="dailySection">
+      <div class="daily-card">
+        <img src="/static/images/daily-chest.svg" alt="Daily chest" />
+        <div class="daily-copy">
+          <h2>📅 Daily Dive Rewards</h2>
+          <p id="dailySummaryText">Claim treasures every 20 hours to keep your streak roaring.</p>
+          <button id="claimDailyBtn" class="primary">Claim Today's Treasure</button>
+          <small id="dailyTimer">Ready now</small>
+        </div>
+        <div class="daily-preview">
+          <img src="/static/images/icon-mystery.svg" alt="Next reward" id="dailyPreviewIcon" />
+          <div>
+            <h4 id="dailyPreviewTitle">Next Claim Preview</h4>
+            <p id="dailyPreviewDetail">Unlock to reveal tomorrow's haul.</p>
+          </div>
+          <img class="daily-sparkle" src="/static/images/icon-legendary.svg" alt="Sparkle" />
+        </div>
+      </div>
+      <div class="daily-milestone-wrap">
+        <h3>🔥 Streak Milestones</h3>
+        <ul id="dailyMilestones" class="daily-milestones"></ul>
+      </div>
+    </section>
 
-    <div class="multiplier-buttons">
-      <button class="multiplier-btn" data-mult="1">x1</button>
-      <button class="multiplier-btn" data-mult="2">x2</button>
-      <button class="multiplier-btn" data-mult="3">x3</button>
-      <button class="multiplier-btn" data-mult="5">x5</button>
-    </div>
+    <section class="panel main-slot slot-machine">
+      <div class="slot-cabinet">
+        <img class="slot-top" src="/static/images/slot-topper.svg" alt="Slot marquee" />
+        <div class="slot-arch">
+          <img src="/static/images/slot-lights.svg" alt="Slot lights" />
+          <span>Neon Tide Slots</span>
+        </div>
+        <div class="slot-body">
+          <div class="reel-container" id="slotReels">
+            <div class="reel" id="reel1">🦈</div>
+            <div class="reel" id="reel2">💎</div>
+            <div class="reel" id="reel3">🍋</div>
+          </div>
+          <div class="slot-footer">
+            <div class="multiplier-buttons">
+              <button class="multiplier-btn active" data-mult="1">x1</button>
+              <button class="multiplier-btn" data-mult="2">x2</button>
+              <button class="multiplier-btn" data-mult="3">x3</button>
+              <button class="multiplier-btn" data-mult="5">x5</button>
+            </div>
+            <button id="spinBtn" class="primary">Spin the Reef 🎰</button>
+            <div id="result" class="result"></div>
+          </div>
+        </div>
+        <img class="slot-base" src="/static/images/slot-base.svg" alt="Slot base" />
+        <img class="slot-glow" src="/static/images/icon-spins.svg" alt="Spin aura" />
+      </div>
+    </section>
 
-    <button id="spinBtn">SPIN 🎰</button>
+    <section class="panel wheel" id="wheelSection">
+      <h2>🌀 Wheel of Tides</h2>
+      <div class="wheel-stage">
+        <img class="wheel-frame" src="/static/images/wheel-frame.svg" alt="Wheel frame" />
+        <div class="fortune-wheel" id="fortuneWheel"></div>
+        <div class="wheel-pointer"></div>
+        <img class="wheel-bubbles" src="/static/images/bg-bubbles.svg" alt="Bubble trail" />
+      </div>
+      <button id="wheelSpinBtn" class="secondary">Spin the Fortune Current</button>
+      <div id="wheelMessage" class="result"></div>
+    </section>
 
-    <div id="result"></div>
+    <section class="panel stickers" id="stickersSection">
+      <div class="section-heading">
+        <h2>📔 Sticker Albums</h2>
+        <div class="sticker-actions">
+          <span id="duplicateCount">0 duplicate stickers</span>
+          <div class="trade-buttons">
+            <button class="secondary" data-trade="coins" data-sets="1">Trade 5 → 🪙 Boost</button>
+            <button class="secondary" data-trade="energy" data-sets="1">Trade 5 → ⚡ Surge</button>
+            <button class="secondary" data-trade="coins" data-sets="3">Trade 15 → 🪙🪙🪙</button>
+            <button class="secondary" data-trade="energy" data-sets="3">Trade 15 → ⚡⚡⚡</button>
+          </div>
+        </div>
+      </div>
+      <p class="trade-summary" id="tradeSummary">Collect more stickers to unlock trades.</p>
+      <div id="albumsList" class="albums"></div>
+      <img class="stickers-floating" src="/static/images/info-album.svg" alt="Album art" />
+    </section>
 
-    <div class="shop">
-      <h3>Shop</h3>
-      <button id="buyEnergyBtn">Buy 100 Energy (⭐ Stars)</button>
-    </div>
+    <section class="panel events" id="eventsSection">
+      <h2>🎉 Live Events</h2>
+      <div id="eventsList" class="events-list"></div>
+      <img class="events-accent" src="/static/images/event-regatta.svg" alt="Regatta art" />
+    </section>
+
+    <section class="panel leaderboard" id="leaderboardSection">
+      <h2>🏆 Reef Leaderboards</h2>
+      <div class="leaderboard-grid">
+        <div>
+          <h3>Top SharkCoins</h3>
+          <ol id="leaderboardCoins"></ol>
+        </div>
+        <div>
+          <h3>Top XP Divers</h3>
+          <ol id="leaderboardXp"></ol>
+        </div>
+      </div>
+      <p class="leaderboard-note">Scores refresh after every spin, wheel win, and album completion. Keep streaks alive for bonus climbs!</p>
+      <img class="leaderboard-glow" src="/static/images/info-leaderboard.svg" alt="Leaderboard glow" />
+    </section>
+
+    <section class="panel shop" id="shopSection">
+      <h2>⭐ Star Shop</h2>
+      <p class="shop-note">Choose themed bundles to fuel your marathon sessions. Purchases are fulfilled instantly via Telegram Stars.</p>
+      <div id="starPackages" class="shop-grid"></div>
+      <img class="shop-galaxy" src="/static/images/star-pack-galaxy.svg" alt="Galaxy pack" />
+    </section>
+
+    <section class="panel info" id="glossarySection">
+      <h2>📚 Reef Encyclopedia</h2>
+      <p class="info-note">Tap into every system that powers SharkSpin. Operators and players alike can study these neon knowledge cards.</p>
+      <div id="glossaryList" class="info-grid"></div>
+      <img class="info-orb" src="/static/images/info-wheel.svg" alt="Info orb" />
+    </section>
   </div>
   <script src="/static/game.js"></script>
 </body>

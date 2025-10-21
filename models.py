@@ -1,5 +1,14 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Boolean
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    Float,
+    Boolean,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -15,6 +24,14 @@ class User(Base):
     last_spin_at = Column(DateTime)
     level = Column(Integer, default=1)
     total_earned = Column(Integer, default=0)
+    wheel_tokens = Column(Integer, default=0)
+    last_wheel_spin_at = Column(DateTime)
+    xp = Column(Integer, default=0)
+    daily_streak = Column(Integer, default=0)
+    last_daily_claim_at = Column(DateTime)
+    level_reward_checkpoint = Column(Integer, default=1)
+    lifetime_spins = Column(Integer, default=0)
+    free_sticker_packs = Column(Integer, default=0)
 
 class Spin(Base):
     __tablename__ = "spins"
@@ -45,3 +62,98 @@ class RewardLink(Base):
     created_by = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class WheelReward(Base):
+    __tablename__ = "wheel_rewards"
+    id = Column(Integer, primary_key=True)
+    label = Column(String, nullable=False)
+    reward_type = Column(String, nullable=False)
+    amount = Column(Integer, nullable=False)
+    weight = Column(Float, default=1.0)
+    color = Column(String, default="#00bcd4")
+
+
+class WheelSpin(Base):
+    __tablename__ = "wheel_spins"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    reward_id = Column(Integer, ForeignKey("wheel_rewards.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    reward = relationship("WheelReward")
+
+
+class StickerAlbum(Base):
+    __tablename__ = "sticker_albums"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, unique=True, nullable=False)
+    description = Column(String, default="")
+    reward_spins = Column(Integer, default=1)
+    sticker_cost = Column(Integer, default=50)
+
+
+class Sticker(Base):
+    __tablename__ = "stickers"
+    id = Column(Integer, primary_key=True)
+    album_id = Column(Integer, ForeignKey("sticker_albums.id"), index=True)
+    name = Column(String, nullable=False)
+    rarity = Column(String, default="common")
+    weight = Column(Float, default=1.0)
+    image_url = Column(String, default="")
+
+    album = relationship("StickerAlbum", backref="stickers")
+
+
+class UserSticker(Base):
+    __tablename__ = "user_stickers"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    sticker_id = Column(Integer, ForeignKey("stickers.id"), index=True)
+    quantity = Column(Integer, default=0)
+
+    __table_args__ = (UniqueConstraint("user_id", "sticker_id", name="uq_user_sticker"),)
+
+    user = relationship("User")
+    sticker = relationship("Sticker")
+
+
+class LiveEvent(Base):
+    __tablename__ = "live_events"
+    id = Column(Integer, primary_key=True)
+    slug = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(String, default="")
+    start_at = Column(DateTime, nullable=False)
+    end_at = Column(DateTime, nullable=False)
+    target_spins = Column(Integer, default=50)
+    reward_type = Column(String, default="spins")
+    reward_amount = Column(Integer, default=1)
+
+
+class EventProgress(Base):
+    __tablename__ = "event_progress"
+    id = Column(Integer, primary_key=True)
+    event_id = Column(Integer, ForeignKey("live_events.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    progress = Column(Integer, default=0)
+    claimed = Column(Boolean, default=False)
+
+    __table_args__ = (UniqueConstraint("event_id", "user_id", name="uq_event_progress"),)
+
+    event = relationship("LiveEvent", backref="progress_entries")
+    user = relationship("User")
+
+
+class AlbumCompletion(Base):
+    __tablename__ = "album_completions"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    album_id = Column(Integer, ForeignKey("sticker_albums.id"), index=True)
+    completed_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "album_id", name="uq_album_completion"),)
+
+    user = relationship("User")

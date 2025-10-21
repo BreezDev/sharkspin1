@@ -1,0 +1,17 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="skyWhale" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5ef3ff" />
+      <stop offset="100%" stop-color="#1a1f6f" />
+    </linearGradient>
+    <linearGradient id="whaleSkyBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fff6ff" />
+      <stop offset="100%" stop-color="#b1c9ff" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="24" fill="url(#skyWhale)" />
+  <path d="M22 98 C34 72 64 60 96 60 C120 56 136 52 142 40 C146 58 138 78 120 90 C128 94 134 106 134 118 C110 110 88 116 66 134 C48 126 30 124 22 120 L32 104 C22 106 16 104 22 98Z" fill="url(#whaleSkyBody)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="4" />
+  <circle cx="116" cy="74" r="6" fill="#1f2964" />
+  <circle cx="114" cy="72" r="2.4" fill="#ffffff" />
+  <path d="M68 128 C74 118 86 112 98 110" stroke="#91a8ff" stroke-width="6" stroke-linecap="round" />
+</svg>

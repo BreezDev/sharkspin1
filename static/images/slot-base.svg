@@ -1,0 +1,11 @@
+
+<svg width="420" height="80" viewBox="0 0 420 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="slotBase" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0b1e33" />
+      <stop offset="100%" stop-color="#162d54" />
+    </linearGradient>
+  </defs>
+  <path d="M10 10 h400 l-24 60 h-352 Z" fill="url(#slotBase)" />
+  <path d="M40 25 h340" stroke="rgba(60,245,255,0.35)" stroke-width="3" stroke-linecap="round" />
+</svg>
