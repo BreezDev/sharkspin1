@@ -15,14 +15,8 @@ from models import (
 )
 
 
-SYMBOL_DEFINITIONS: Sequence[Tuple[str, float, Dict[str, int]]] = (
-    ("🪙", 0.21, {"coins": 120}),
-    ("⚡", 0.18, {"coins": 70, "energy": 22}),
-    ("🌀", 0.14, {"coins": 55, "wheel_tokens": 1}),
-    ("💎", 0.16, {"coins": 220, "energy": 8}),
-    ("🦈", 0.13, {"coins": 150, "energy": 24, "wheel_tokens": 1}),
-    ("🌊", 0.18, {"coins": 135, "energy": 12}),
-)
+SYMBOLS: Sequence[str] = ("🦈", "💎", "🪙", "🍋", "🎲", "🔱")
+SYMBOL_WEIGHTS: Sequence[float] = (0.24, 0.16, 0.16, 0.22, 0.17, 0.05)
 
 SYMBOLS: Sequence[str] = tuple(sym for sym, _, _ in SYMBOL_DEFINITIONS)
 SYMBOL_WEIGHTS: Sequence[float] = tuple(weight for _, weight, _ in SYMBOL_DEFINITIONS)
@@ -30,7 +24,6 @@ SYMBOL_REWARD_BASE: Dict[str, Dict[str, int]] = {
     sym: base for sym, _, base in SYMBOL_DEFINITIONS
 }
 SHARK_SYMBOL = "🦈"
-
 
 # --- Slot Machine Logic ----------------------------------------------------
 
@@ -42,25 +35,6 @@ def can_spin(user: User, multiplier: int) -> Tuple[bool, str]:
     return True, ""
 
 
-def merge_rewards(*rewards: Dict[str, float]) -> Dict[str, int]:
-    merged: Dict[str, float] = {}
-    for reward in rewards:
-        if not reward:
-            continue
-        for key, value in reward.items():
-            merged[key] = merged.get(key, 0.0) + float(value)
-    finalized: Dict[str, int] = {}
-    for key, value in merged.items():
-        scaled = int(round(value))
-        if scaled:
-            finalized[key] = scaled
-    return finalized
-
-
-def scale_reward(reward: Dict[str, int], factor: float) -> Dict[str, float]:
-    return {key: value * factor for key, value in reward.items()}
-
-
 def apply_spin(user: User, multiplier: int = 1):
     ok, msg = can_spin(user, multiplier)
     if not ok:
@@ -69,129 +43,27 @@ def apply_spin(user: User, multiplier: int = 1):
     user.energy -= Config.ENERGY_PER_SPIN * multiplier
 
     reels = [roll_symbol() for _ in range(3)]
-    reward, label = calc_payout(reels, multiplier)
+    payout, label = calc_payout(reels, multiplier)
 
-    coins_delta = reward.get("coins", 0)
-    energy_bonus = reward.get("energy", 0)
-    wheel_bonus = reward.get("wheel_tokens", 0)
+    user.coins += payout
+    user.total_earned += payout
+    user.level = max(1, 1 + int((user.total_earned / 1200) ** 0.6))
 
-    user.coins += coins_delta
-    user.total_earned += coins_delta
-    if energy_bonus:
-        user.energy += energy_bonus
-    if wheel_bonus:
-        user.wheel_tokens += wheel_bonus
-
-    xp_gain = calc_spin_xp(reward, multiplier)
-    user.xp += xp_gain
-    user.lifetime_spins += multiplier
-    user.last_spin_at = datetime.utcnow()
-
-    level_info = calculate_level_progress(user.xp)
-    user.level = level_info["level"]
-
-    return True, "", coins_delta, {
-        "symbols": reels,
-        "label": label,
-        "xp_gain": xp_gain,
-        "rewards": reward,
-        "level_info": level_info,
-    }
+    return True, "", payout, {"symbols": reels, "label": label}
 
 
 def roll_symbol() -> str:
     return random.choices(SYMBOLS, SYMBOL_WEIGHTS)[0]
 
 
-def calc_payout(reels: Sequence[str], mult: int) -> Tuple[Dict[str, int], str]:
-    counts = {sym: reels.count(sym) for sym in set(reels)}
-
-    def ensure_coins(payload: Dict[str, int]) -> Dict[str, int]:
-        if "coins" not in payload:
-            payload = {**payload, "coins": 0}
-        return payload
-
-    if len(counts) == 1:
-        sym = reels[0]
-        reward = merge_rewards(scale_reward(SYMBOL_REWARD_BASE[sym], 3 * mult))
-        return ensure_coins(reward), f"Triple {sym}"
-
-    if 3 in counts.values():
-        sym = max(counts, key=counts.get)
-        reward = merge_rewards(scale_reward(SYMBOL_REWARD_BASE[sym], 3 * mult))
-        return ensure_coins(reward), f"Triple {sym}"
-
-    if 2 in counts.values():
-        sym = max(counts, key=counts.get)
-        base = SYMBOL_REWARD_BASE.get(sym, {"coins": 60})
-        reward = merge_rewards(scale_reward(base, 1.75 * mult))
-        if SHARK_SYMBOL in counts and sym != SHARK_SYMBOL:
-            shark_bonus = scale_reward(SYMBOL_REWARD_BASE[SHARK_SYMBOL], 0.45 * mult)
-            reward = merge_rewards(reward, shark_bonus)
-        reward.setdefault("coins", 0)
-        reward["coins"] += int(40 * mult)
-        return ensure_coins(reward), f"Double {sym}"
-
-    if SHARK_SYMBOL in counts:
-        companion = [sym for sym in reels if sym != SHARK_SYMBOL]
-        if companion:
-            base = merge_rewards(*[SYMBOL_REWARD_BASE.get(sym, {"coins": 60}) for sym in companion])
-        else:
-            base = SYMBOL_REWARD_BASE[SHARK_SYMBOL]
-        reward = merge_rewards(
-            scale_reward(base, 1.2 * mult),
-            scale_reward(SYMBOL_REWARD_BASE[SHARK_SYMBOL], 0.8 * mult),
-            {"coins": 60 * mult, "energy": 6 * mult},
-        )
-        return ensure_coins(reward), "Wild Surge"
-
-    base_mix = merge_rewards(*[SYMBOL_REWARD_BASE.get(sym, {"coins": 45}) for sym in reels])
-    reward = merge_rewards(scale_reward(base_mix, 0.55 * mult), {"coins": 30 * mult})
-    return ensure_coins(reward), "Cascade Mix"
-
-
-def calc_spin_xp(reward: Dict[str, int], multiplier: int) -> int:
-    coin_equiv = reward.get("coins", 0)
-    coin_equiv += reward.get("energy", 0) * 4
-    coin_equiv += reward.get("wheel_tokens", 0) * 160
-    coin_equiv += reward.get("sticker_packs", 0) * 220
-    base = 18 * multiplier
-    bonus = min(160, max(6, coin_equiv // 5))
-    return base + bonus
-
-
-def xp_threshold_for_level(level: int) -> int:
-    if level <= 1:
-        return 0
-    curve = Config.LEVEL_XP_CURVE
-    if level <= len(curve):
-        return curve[level - 1]
-    extra_levels = level - len(curve)
-    last = curve[-1]
-    # Apply gentle quadratic growth for levels beyond predefined curve
-    return last + extra_levels * 650 + (extra_levels * (extra_levels - 1) // 2) * 180
-
-
-def calculate_level_progress(xp: int) -> Dict[str, int]:
-    level = 1
-    while xp >= xp_threshold_for_level(level + 1):
-        level += 1
-
-    current_floor = xp_threshold_for_level(level)
-    next_level = level + 1
-    next_floor = xp_threshold_for_level(next_level)
-    progress = xp - current_floor
-    required = max(1, next_floor - current_floor)
-    pct = max(0, min(100, int((progress / required) * 100)))
-    return {
-        "level": level,
-        "xp": xp,
-        "progress": progress,
-        "required": required,
-        "progress_pct": pct,
-        "next_level": next_level,
-        "next_level_xp": next_floor,
-    }
+def calc_payout(reels: Sequence[str], mult: int) -> Tuple[int, str]:
+    if reels[0] == reels[1] == reels[2]:
+        return 600 * mult, "Triple Match"
+    if len(set(reels)) == 2:
+        return 75 * mult, "Double Match"
+    if "🦈" in reels:
+        return 10 * mult, "Shark Spot"
+    return 5 * mult, "Lucky Swim"
 
 
 # --- Wheel Of Fortune ------------------------------------------------------
@@ -234,7 +106,7 @@ def apply_reward(user: User, reward: WheelReward):
     elif reward.reward_type == "energy":
         user.energy += reward.amount
     elif reward.reward_type == "sticker_pack":
-        user.free_sticker_packs += reward.amount
+        user.wheel_tokens += reward.amount
     else:
         user.coins += reward.amount
 
@@ -266,69 +138,15 @@ def ensure_default_albums(session):
 
     session.add_all(
         [
-            Sticker(
-                album_id=ocean_album.id,
-                name="Great Hammerhead",
-                rarity="rare",
-                weight=0.8,
-                image_url="/static/images/stickers/great-hammerhead.svg",
-            ),
-            Sticker(
-                album_id=ocean_album.id,
-                name="Tiger Shark",
-                rarity="common",
-                weight=2.5,
-                image_url="/static/images/stickers/tiger-shark.svg",
-            ),
-            Sticker(
-                album_id=ocean_album.id,
-                name="Goblin Shark",
-                rarity="epic",
-                weight=0.35,
-                image_url="/static/images/stickers/goblin-shark.svg",
-            ),
-            Sticker(
-                album_id=ocean_album.id,
-                name="Manta Ray",
-                rarity="common",
-                weight=2.0,
-                image_url="/static/images/stickers/manta-ray.svg",
-            ),
-            Sticker(
-                album_id=ocean_album.id,
-                name="Whale Shark",
-                rarity="legendary",
-                weight=0.15,
-                image_url="/static/images/stickers/whale-shark.svg",
-            ),
-            Sticker(
-                album_id=sky_album.id,
-                name="Storm Seagull",
-                rarity="common",
-                weight=2.7,
-                image_url="/static/images/stickers/storm-seagull.svg",
-            ),
-            Sticker(
-                album_id=sky_album.id,
-                name="Jetpack Penguin",
-                rarity="rare",
-                weight=0.9,
-                image_url="/static/images/stickers/jetpack-penguin.svg",
-            ),
-            Sticker(
-                album_id=sky_album.id,
-                name="Aurora Drake",
-                rarity="legendary",
-                weight=0.2,
-                image_url="/static/images/stickers/aurora-drake.svg",
-            ),
-            Sticker(
-                album_id=sky_album.id,
-                name="Sky Whale",
-                rarity="epic",
-                weight=0.35,
-                image_url="/static/images/stickers/sky-whale.svg",
-            ),
+            Sticker(album_id=ocean_album.id, name="Great Hammerhead", rarity="rare", weight=0.8),
+            Sticker(album_id=ocean_album.id, name="Tiger Shark", rarity="common", weight=2.5),
+            Sticker(album_id=ocean_album.id, name="Goblin Shark", rarity="epic", weight=0.35),
+            Sticker(album_id=ocean_album.id, name="Manta Ray", rarity="common", weight=2.0),
+            Sticker(album_id=ocean_album.id, name="Whale Shark", rarity="legendary", weight=0.15),
+            Sticker(album_id=sky_album.id, name="Storm Seagull", rarity="common", weight=2.7),
+            Sticker(album_id=sky_album.id, name="Jetpack Penguin", rarity="rare", weight=0.9),
+            Sticker(album_id=sky_album.id, name="Aurora Drake", rarity="legendary", weight=0.2),
+            Sticker(album_id=sky_album.id, name="Sky Whale", rarity="epic", weight=0.35),
         ]
     )
     session.commit()
@@ -389,111 +207,6 @@ def complete_album(session, user: User, album: StickerAlbum):
     return True
 
 
-def trade_stickers_for_reward(
-    session, user: User, reward_type: str, sets: int
-) -> Tuple[bool, str, Dict[str, int]]:
-    if sets < 1:
-        return False, "You must trade at least one set.", {}
-
-    needed = Config.STICKER_TRADE_SET_SIZE * sets
-    owned_duplicates: List[UserSticker] = (
-        session.query(UserSticker)
-        .filter(UserSticker.user_id == user.id, UserSticker.quantity > 1)
-        .all()
-    )
-    total_extra = sum(us.quantity - 1 for us in owned_duplicates)
-    if total_extra < needed:
-        return (
-            False,
-            f"Collect {needed} duplicate stickers to trade (you have {total_extra}).",
-            {},
-        )
-
-    remaining = needed
-    for entry in owned_duplicates:
-        if remaining <= 0:
-            break
-        usable = min(entry.quantity - 1, remaining)
-        entry.quantity -= usable
-        remaining -= usable
-    session.flush()
-
-    payload = {}
-    if reward_type == "coins":
-        coins = Config.STICKER_TRADE_COINS * sets
-        user.coins += coins
-        payload = {"coins": coins}
-    elif reward_type == "energy":
-        energy = Config.STICKER_TRADE_ENERGY * sets
-        user.energy += energy
-        payload = {"energy": energy}
-    else:
-        return False, "Invalid reward type", {}
-
-    return True, "Trade successful", payload
-
-
-def get_level_reward(level: int):
-    return Config.LEVEL_REWARDS.get(level)
-
-
-def apply_level_reward(session, user: User, level: int) -> Dict[str, str] | None:
-    reward = get_level_reward(level)
-    if not reward:
-        return None
-
-    rtype = reward["type"]
-    amount = reward.get("amount", 0)
-    if rtype == "coins":
-        user.coins += amount
-        text = f"+{amount} SharkCoins"
-    elif rtype == "energy":
-        user.energy += amount
-        text = f"+{amount} Energy"
-    elif rtype == "wheel_tokens":
-        user.wheel_tokens += amount
-        text = f"+{amount} Wheel Tokens"
-    elif rtype == "spins":
-        user.energy += amount * Config.ENERGY_PER_SPIN
-        text = f"Free spins worth {amount * Config.ENERGY_PER_SPIN} energy"
-    elif rtype == "sticker_pack":
-        user.free_sticker_packs += amount
-        text = f"+{amount} Sticker Pack Token"
-    elif rtype == "legendary_sticker":
-        sticker = (
-            session.query(Sticker)
-            .filter(Sticker.rarity == "legendary")
-            .order_by(Sticker.id)
-            .first()
-        )
-        if sticker:
-            grant_sticker(session, user, sticker)
-            text = f"Legendary sticker: {sticker.name}!"
-        else:
-            user.coins += 1500
-            text = "+1500 SharkCoins (legendary bonus)"
-    else:
-        user.coins += amount
-        text = f"+{amount} SharkCoins"
-
-    user.level_reward_checkpoint = max(user.level_reward_checkpoint, level)
-    session.flush()
-    return {"level": level, "description": text}
-
-
-def resolve_level_rewards(session, user: User, previous_level: int) -> List[Dict[str, str]]:
-    rewards = []
-    if user.level <= previous_level:
-        return rewards
-    for lvl in range(previous_level + 1, user.level + 1):
-        if lvl <= user.level_reward_checkpoint:
-            continue
-        reward = apply_level_reward(session, user, lvl)
-        if reward:
-            rewards.append(reward)
-    return rewards
-
-
 # --- Events ----------------------------------------------------------------
 
 def ensure_demo_event(session):
@@ -548,15 +261,6 @@ def serialize_event(event: LiveEvent, progress: EventProgress | None):
         status = "live"
     elif now > event.end_at:
         status = "ended"
-    reward_emoji = {
-        "spins": "🎰",
-        "coins": "🪙",
-        "wheel_tokens": "🌀",
-        "energy": "⚡",
-    }.get(event.reward_type, "🎁")
-    art_map = {
-        "grand-regatta": "/static/images/event-regatta.svg",
-    }
     return {
         "slug": event.slug,
         "name": event.name,
@@ -569,6 +273,4 @@ def serialize_event(event: LiveEvent, progress: EventProgress | None):
         "status": status,
         "progress": progress.progress if progress else 0,
         "claimed": progress.claimed if progress else False,
-        "emoji": reward_emoji,
-        "art_url": art_map.get(event.slug),
     }
