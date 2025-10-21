@@ -1,25 +1,12 @@
 import logging
-from telegram import (
-    Update,
-    LabeledPrice,
-    WebAppInfo,
-    KeyboardButton,
-    ReplyKeyboardMarkup
-)
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
-    PreCheckoutQueryHandler,
-    MessageHandler,
-    filters,
-)
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram.ext import Application, CommandHandler, ContextTypes
 from sqlalchemy import select, create_engine
 from sqlalchemy.orm import sessionmaker
 from itsdangerous import URLSafeSerializer
 
 from config import Config
-from models import User, Payment, Base, RewardLink
+from models import Base, RewardLink, User
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("sharkspin.bot")
@@ -28,10 +15,16 @@ engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, future=True)
 Session = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 Base.metadata.create_all(engine)
 
-CURRENCY = "XTR"  # IMPORTANT: Stars currency per Telegram docs
-
 reward_signer = URLSafeSerializer(Config.SECRET_KEY, salt="sharkspin:reward")
 ADMIN_ID = "1821897182"  # your Telegram user_id — replace with yours
+
+def build_webapp_markup(label: str = "Open SharkSpin", path: str | None = None):
+    url = Config.WEBAPP_URL.rstrip("/")
+    if path:
+        url = f"{url}/{path.lstrip('/')}"
+    button = InlineKeyboardButton(label, web_app=WebAppInfo(url=url))
+    return InlineKeyboardMarkup([[button]])
+
 
 async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if str(update.effective_user.id) != ADMIN_ID:
@@ -40,12 +33,16 @@ async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Usage: /reward <type> <amount> <uses>
     if len(context.args) < 3:
-        await update.message.reply_text("Usage: /reward <coins|energy|spins> <amount> <uses>")
+        await update.message.reply_text(
+            "Usage: /reward <coins|energy|spins|wheel_tokens|sticker_pack> <amount> <uses>"
+        )
         return
 
     rtype = context.args[0].lower()
-    if rtype not in ["coins", "energy", "spins"]:
-        await update.message.reply_text("❌ Invalid type. Use coins, energy, or spins.")
+    if rtype not in ["coins", "energy", "spins", "wheel_tokens", "sticker_pack"]:
+        await update.message.reply_text(
+            "❌ Invalid type. Use coins, energy, spins, wheel_tokens, or sticker_pack."
+        )
         return
 
     try:
@@ -61,40 +58,48 @@ async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # save in DB
     with Session() as s:
-        rl = RewardLink(
-            token=token,
-            reward_type=rtype,
-            amount=amount,
-            uses_left=uses,
-            created_by=str(update.effective_user.id),
+        existing = (
+            s.execute(select(RewardLink).where(RewardLink.token == token)).scalar_one_or_none()
         )
-        s.add(rl)
+        if existing:
+            rl = existing
+            rl.reward_type = rtype
+            rl.amount = amount
+            rl.uses_left = uses
+            rl.is_active = True
+            rl.created_by = str(update.effective_user.id)
+        else:
+            rl = RewardLink(
+                token=token,
+                reward_type=rtype,
+                amount=amount,
+                uses_left=uses,
+                created_by=str(update.effective_user.id),
+            )
+            s.add(rl)
         s.commit()
 
     bot_username = (await context.bot.get_me()).username
     url = f"https://t.me/{bot_username}/startapp?startapp=redeem_{token}"
 
-    # ✅ Use MarkdownV2 and escape special characters
-    safe_url = url.replace("-", "\\-").replace("_", "\\_").replace(".", "\\.").replace("=", "\\=")
-    msg = (
-        f"🎁 *Reward Created!*\n"
-        f"Type: `{rtype}`\n"
-        f"Amount: `{amount}`\n"
-        f"Uses: `{uses}`\n\n"
-        f"[👉 Claim Here via Mini App]({safe_url})"
+    markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("🎁 Open reward in SharkSpin", url=url)]]
     )
 
-    try:
-        await update.message.reply_text(msg, parse_mode="MarkdownV2", disable_web_page_preview=True)
-    except Exception as e:
-        log.error(f"Error sending reward message: {e}")
-        await update.message.reply_text(
-            f"🎁 Reward created!\n\nType: {rtype}\nAmount: {amount}\nUses: {uses}\n\nLink:\n{url}"
-        )
+    summary = (
+        "🎁 Reward Created!\n"
+        f"Type: {rtype}\n"
+        f"Amount: {amount}\n"
+        f"Uses: {uses}\n\n"
+        "Tap the button below to launch the mini app and auto-apply the grant."
+    )
+
+    await update.message.reply_text(summary, reply_markup=markup, disable_web_page_preview=True)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tg_user = update.effective_user
+    start_args = context.args
     with Session() as s:
         u = s.execute(select(User).where(User.tg_user_id == str(tg_user.id))).scalar_one_or_none()
         if not u:
@@ -104,14 +109,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             s.commit()
     text = (
         "🦈 Welcome to SharkSpin!\n\n"
-        "Spin to win coins. Buy energy with Telegram Stars.\n"
-        "Open the mini app: Menu → Open (or tap /play).\n\n"
+        "Every spin, shop item, album, and leaderboard now lives inside the mini app interface.\n"
+        "Launch it below whenever you need to manage rewards or explore updates.\n\n"
         "Commands:\n"
-        "/play – open mini app\n"
-        "/buy – purchase 100 energy (⭐ {stars} Stars)\n"
-        "/me – show your balance".format(stars=Config.PRODUCT_ENERGY_PACK_AMOUNT_STARS)
+        "/buy – Star shop menu\n"
+        "/me – show your balance"
     )
-    await update.message.reply_text(text)
+    await update.message.reply_text(text, reply_markup=build_webapp_markup())
 
 
 async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -120,63 +124,34 @@ async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not u:
             await update.message.reply_text("Create an account with /start first.")
             return
-        await update.message.reply_text(f"Coins: {u.coins}\nEnergy: {u.energy}")
-
-
-async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = "https://game-tofumochi.pythonanywhere.com"
-    kb = [[KeyboardButton("🎮 Open SharkSpin", web_app=WebAppInfo(url=url))]]
-    await update.message.reply_text(
-        "Tap below to open SharkSpin:",
-        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True)
-    )
+        await update.message.reply_text(
+            f"Coins: {u.coins}\nEnergy: {u.energy}",
+            reply_markup=build_webapp_markup("Open SharkSpin"),
+        )
 
 
 async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Send Stars invoice. No provider_token is needed for Stars.
-    title = "Energy Pack"
-    description = f"Buy {Config.PRODUCT_ENERGY_PACK_ENERGY} Energy for spins."
-    payload = Config.PRODUCT_ENERGY_PACK_ID
-    currency = CURRENCY
-    prices = [LabeledPrice(label="Energy Pack", amount=Config.PRODUCT_ENERGY_PACK_AMOUNT_STARS)]  # amount in Stars
-
-    await context.bot.send_invoice(
-        chat_id=update.effective_chat.id,
-        title=title,
-        description=description,
-        payload=payload,
-        provider_token="",  # IMPORTANT for Stars
-        currency=currency,
-        prices=prices,
+    menu = "\n".join(
+        [
+            "• {name}: {energy}⚡ + {spins}🌀 for {stars}⭐".format(
+                name=p["name"],
+                energy=p["energy"],
+                spins=p["bonus_spins"],
+                stars=p["stars"],
+            )
+            for p in Config.STAR_PACKAGES
+        ]
     )
-
-
-async def precheckout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.pre_checkout_query
-    await query.answer(ok=True)
-
-
-async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    sp = update.message.successful_payment
-    stars_paid = sp.total_amount  # with Stars, amount is in stars (no fractional units)
-    payload = sp.invoice_payload
-    with Session() as s:
-        u = s.execute(select(User).where(User.tg_user_id == str(update.effective_user.id))).scalar_one_or_none()
-        if not u:
-            return
-        # Credit energy
-        u.energy += Config.PRODUCT_ENERGY_PACK_ENERGY
-        # Record payment
-        p = Payment(
-            tg_payment_charge_id=sp.telegram_payment_charge_id,
-            payload=payload,
-            stars_amount=stars_paid,
-            user_id=u.id,
-        )
-        s.add(p)
-        s.commit()
+    text = (
+        "⭐ The Star Market now lives directly inside the SharkSpin mini app.\n"
+        "Browse packs, review art, and confirm purchases without leaving the experience.\n\n"
+        "Featured bundles:\n"
+        f"{menu}"
+    )
     await update.message.reply_text(
-        f"✅ Payment received: {stars_paid} ⭐️\nEnergy +{Config.PRODUCT_ENERGY_PACK_ENERGY}. Enjoy spinning!"
+        text,
+        reply_markup=build_webapp_markup("Open Star Market", "#shopSection"),
+        disable_web_page_preview=True,
     )
 
 
@@ -193,10 +168,7 @@ def main_polling():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reward", reward))
     app.add_handler(CommandHandler("me", me))
-    app.add_handler(CommandHandler("play", play))
     app.add_handler(CommandHandler("buy", buy))
-    app.add_handler(PreCheckoutQueryHandler(precheckout_handler))
-    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
     app.run_polling(close_loop=False)
 
 if __name__ == "__main__":

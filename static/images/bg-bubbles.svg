@@ -1,0 +1,17 @@
+
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="none" />
+  <g fill="rgba(60,245,255,0.18)">
+    <circle cx="120" cy="140" r="90" />
+    <circle cx="360" cy="80" r="70" />
+    <circle cx="540" cy="200" r="110" />
+    <circle cx="700" cy="120" r="60" />
+    <circle cx="220" cy="340" r="120" />
+    <circle cx="620" cy="420" r="130" />
+  </g>
+  <g fill="rgba(123,91,255,0.15)">
+    <circle cx="180" cy="520" r="80" />
+    <circle cx="460" cy="520" r="70" />
+    <circle cx="720" cy="520" r="90" />
+  </g>
+</svg>
