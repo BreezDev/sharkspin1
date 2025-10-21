@@ -110,7 +110,16 @@ def redeem_reward(token):
 
         s.commit()
 
-        msg = f"🎁 You received {rl.amount} {rl.reward_type.capitalize()}! ({rl.uses_left} uses left)"
+        reward_text_map = {
+            "coins": f"{rl.amount} SharkCoins 🪙",
+            "energy": f"{rl.amount} Energy ⚡",
+            "spins": f"{rl.amount} Free Spins 🎰",
+            "wheel_tokens": f"{rl.amount} Wheel Tokens 🌀",
+            "sticker_pack": f"{rl.amount} Sticker Pack Tokens 📔",
+        }
+        reward_text = reward_text_map.get(rl.reward_type, f"{rl.amount} {rl.reward_type}")
+        remaining = max(rl.uses_left, 0)
+        msg = f"🎁 You received {reward_text}! ({remaining} uses left)"
         return render_template("redeem.html", message=msg)
 
 

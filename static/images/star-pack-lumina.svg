@@ -1,0 +1,24 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="luminaGradient" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#fff4ff" />
+      <stop offset="40%" stop-color="#f58cff" />
+      <stop offset="100%" stop-color="#7c38ff" />
+    </radialGradient>
+    <linearGradient id="ringGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe66d" />
+      <stop offset="100%" stop-color="#ff5f9e" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="160" height="160" rx="32" fill="#1b0c3f" />
+  <circle cx="80" cy="80" r="58" fill="url(#luminaGradient)" opacity="0.88" />
+  <ellipse cx="80" cy="82" rx="70" ry="24" fill="url(#ringGradient)" opacity="0.4" />
+  <g fill="#ffeef9" opacity="0.9">
+    <circle cx="40" cy="44" r="6" />
+    <circle cx="118" cy="36" r="8" />
+    <circle cx="128" cy="110" r="5" />
+    <circle cx="28" cy="110" r="4" />
+  </g>
+  <path d="M80 35l12 24 27 4-19 18 5 26-25-13-25 13 5-26-19-18 27-4z" fill="#fff8d6" opacity="0.92" />
+  <text x="80" y="144" fill="#ffeef9" font-family="'Baloo 2', 'Segoe UI', sans-serif" font-size="22" text-anchor="middle">LUMINA</text>
+</svg>

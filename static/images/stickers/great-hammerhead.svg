@@ -1,0 +1,16 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="water" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f5bff" />
+      <stop offset="100%" stop-color="#001437" />
+    </linearGradient>
+    <linearGradient id="hammer" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#9cf4ff" />
+      <stop offset="100%" stop-color="#5cc9ff" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="26" fill="url(#water)" />
+  <path d="M36 86 C48 62 70 52 94 58 C110 62 126 56 134 46 C138 60 130 76 116 82 C118 86 118 90 116 94 C104 88 88 86 68 98 C58 104 48 112 38 118 L44 100 C26 106 20 100 18 92 C28 92 34 90 36 86Z" fill="url(#hammer)" stroke="#f0fbff" stroke-opacity="0.35" stroke-width="4" stroke-linejoin="round" />
+  <circle cx="90" cy="74" r="6" fill="#03203b" />
+  <circle cx="88" cy="72" r="2.5" fill="#bdf7ff" />
+</svg>

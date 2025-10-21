@@ -1,0 +1,17 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tigerWater" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002d3f" />
+      <stop offset="100%" stop-color="#001014" />
+    </linearGradient>
+    <linearGradient id="tigerBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f6ffba" />
+      <stop offset="100%" stop-color="#ff9c5c" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="24" fill="url(#tigerWater)" />
+  <path d="M26 104 C34 82 60 60 102 62 C118 48 126 42 138 42 C134 56 128 64 120 70 C128 76 134 86 134 96 C114 88 94 90 72 108 C60 118 48 128 34 132 L42 110 C30 114 24 110 22 104 Z" fill="url(#tigerBody)" stroke="#ffeed9" stroke-opacity="0.4" stroke-width="4" />
+  <path d="M52 102 L68 78" stroke="#f36f3f" stroke-width="6" stroke-linecap="round" />
+  <circle cx="108" cy="74" r="6" fill="#250c00" />
+  <circle cx="106" cy="72" r="2.5" fill="#fff1cf" />
+</svg>

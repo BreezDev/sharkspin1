@@ -1,0 +1,16 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mantaWater" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00496f" />
+      <stop offset="100%" stop-color="#001220" />
+    </linearGradient>
+    <linearGradient id="mantaBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8cfffb" />
+      <stop offset="100%" stop-color="#47b3ff" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="24" fill="url(#mantaWater)" />
+  <path d="M20 86 C36 66 60 48 80 44 C106 38 134 46 142 54 C136 70 120 84 104 88 C104 98 96 114 84 126 C74 114 66 102 62 90 C44 94 28 92 20 86Z" fill="url(#mantaBody)" stroke="#eaffff" stroke-opacity="0.4" stroke-width="4" />
+  <circle cx="96" cy="70" r="6" fill="#032438" />
+  <circle cx="94" cy="68" r="2.5" fill="#dfffff" />
+</svg>

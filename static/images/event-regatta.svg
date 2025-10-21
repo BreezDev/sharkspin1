@@ -1,0 +1,14 @@
+
+<svg width="320" height="160" viewBox="0 0 320 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="regatta" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00bbf9" />
+      <stop offset="100%" stop-color="#ff595e" />
+    </linearGradient>
+  </defs>
+  <rect width="320" height="160" rx="24" fill="url(#regatta)" />
+  <path d="M40 120 C80 90 130 90 170 120" stroke="rgba(255,255,255,0.6)" stroke-width="6" fill="none" stroke-linecap="round" />
+  <path d="M180 120 C220 90 270 90 300 120" stroke="rgba(255,255,255,0.5)" stroke-width="6" fill="none" stroke-linecap="round" />
+  <polygon points="130,30 110,80 150,80" fill="rgba(255,255,255,0.85)" />
+  <polygon points="210,40 190,90 230,90" fill="rgba(255,255,255,0.75)" />
+</svg>

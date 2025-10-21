@@ -1,0 +1,18 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="auroraSky" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c5bff" />
+      <stop offset="100%" stop-color="#140029" />
+    </linearGradient>
+    <linearGradient id="auroraBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7cffe8" />
+      <stop offset="50%" stop-color="#61a8ff" />
+      <stop offset="100%" stop-color="#ff81f4" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="26" fill="url(#auroraSky)" />
+  <path d="M22 92 C38 70 62 56 86 54 C104 46 130 48 140 44 C138 60 130 74 118 82 C126 86 134 96 138 108 C118 100 98 104 78 124 C64 138 46 144 30 142 L40 120 C26 122 16 110 22 92Z" fill="url(#auroraBody)" stroke="#e5faff" stroke-opacity="0.45" stroke-width="4" />
+  <circle cx="112" cy="70" r="6" fill="#1d0a2e" />
+  <circle cx="110" cy="68" r="2.4" fill="#f2ffff" />
+  <path d="M98 56 L126 44 L120 70 Z" fill="#f9f871" opacity="0.8" />
+</svg>

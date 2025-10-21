@@ -1,0 +1,21 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="whaleWater" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00183f" />
+      <stop offset="100%" stop-color="#00060f" />
+    </linearGradient>
+    <linearGradient id="whaleBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#68e4ff" />
+      <stop offset="100%" stop-color="#4a88ff" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="28" fill="url(#whaleWater)" />
+  <path d="M18 94 C28 62 60 46 108 52 C126 44 140 36 144 26 C148 40 144 60 130 72 C138 78 146 92 146 106 C124 98 96 108 74 132 C56 122 38 116 24 120 L34 100 C20 102 12 98 18 94Z" fill="url(#whaleBody)" stroke="#dff7ff" stroke-opacity="0.45" stroke-width="4" />
+  <circle cx="118" cy="70" r="6" fill="#05112a" />
+  <circle cx="116" cy="68" r="2.6" fill="#c6f4ff" />
+  <g fill="#fff" fill-opacity="0.45">
+    <circle cx="62" cy="86" r="3" />
+    <circle cx="74" cy="80" r="2.5" />
+    <circle cx="86" cy="90" r="2.8" />
+  </g>
+</svg>
