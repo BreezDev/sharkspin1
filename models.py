@@ -150,3 +150,14 @@ class AlbumCompletion(Base):
     __table_args__ = (UniqueConstraint("user_id", "album_id", name="uq_album_completion"),)
 
     user = relationship("User")
+
+
+class DailyRewardState(Base):
+    __tablename__ = "daily_reward_state"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, unique=True, nullable=False)
+    last_claim_at = Column(DateTime)
+    streak = Column(Integer, default=0)
+    total_claims = Column(Integer, default=0)
+
+    user = relationship("User")

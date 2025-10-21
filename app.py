@@ -1,15 +1,20 @@
+import json
+import random
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+import requests
 from flask import Flask, jsonify, request, render_template, abort
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, sessionmaker
 from itsdangerous import URLSafeSerializer, BadSignature
 
 from config import Config
+from content import DASHBOARD_FACTS, GUIDE_SECTIONS, TASKBAR_LINKS
 from models import (
     AlbumCompletion,
     Base,
+    DailyRewardState,
     EventProgress,
     LiveEvent,
     RewardLink,
@@ -46,6 +51,113 @@ Base.metadata.create_all(engine)
 signer = URLSafeSerializer(Config.SECRET_KEY, salt="sharkspin:webapp")
 reward_signer = URLSafeSerializer(Config.SECRET_KEY, salt="sharkspin:reward")
 
+
+def _xp_threshold(level_index: int) -> int:
+    curve = Config.LEVEL_XP_CURVE
+    if level_index < len(curve):
+        return curve[level_index]
+    extra_steps = level_index - (len(curve) - 1)
+    return curve[-1] + max(extra_steps, 0) * 500
+
+
+def _level_progress(user: User) -> Dict[str, Any]:
+    current_level = max(user.level, 1)
+    floor = _xp_threshold(current_level - 1)
+    ceiling = _xp_threshold(current_level)
+    current_xp = getattr(user, "total_earned", 0)
+    gained = max(0, current_xp - floor)
+    span = max(1, ceiling - floor)
+    percent = min(100, int((gained / span) * 100))
+    return {
+        "current_xp": current_xp,
+        "floor": floor,
+        "ceiling": ceiling,
+        "remaining": max(0, ceiling - current_xp),
+        "percent": percent,
+    }
+
+
+def _get_daily_state(session, user: User) -> DailyRewardState:
+    state = (
+        session.query(DailyRewardState)
+        .filter(DailyRewardState.user_id == user.id)
+        .one_or_none()
+    )
+    if not state:
+        state = DailyRewardState(user_id=user.id, streak=0, total_claims=0)
+        session.add(state)
+        session.flush()
+    return state
+
+
+def _daily_reward_values(next_streak: int) -> Dict[str, int]:
+    coins = Config.DAILY_REWARD_BASE_COINS + Config.DAILY_STREAK_BONUS * max(next_streak - 1, 0)
+    energy = Config.DAILY_REWARD_BASE_ENERGY + max(next_streak - 1, 0)
+    wheel_tokens = 1 if (next_streak in Config.DAILY_MILESTONES or next_streak % 7 == 0) else 0
+    return {"coins": coins, "energy": energy, "wheel_tokens": wheel_tokens}
+
+
+def serialize_daily_state(state: DailyRewardState) -> Dict[str, Any]:
+    now = datetime.utcnow()
+    next_streak = state.streak + 1
+    reward_preview = _daily_reward_values(next_streak)
+    if state.last_claim_at is None:
+        can_claim = True
+        seconds_until = 0
+    else:
+        diff = now - state.last_claim_at
+        can_claim = diff >= timedelta(hours=24)
+        seconds_until = max(0, int(86400 - diff.total_seconds())) if not can_claim else 0
+    return {
+        "streak": state.streak,
+        "last_claim_at": state.last_claim_at.isoformat() if state.last_claim_at else None,
+        "can_claim": can_claim,
+        "seconds_until": seconds_until,
+        "next_reward": reward_preview,
+    }
+
+
+def _find_package(package_id: str | None) -> Optional[Dict[str, Any]]:
+    if not package_id:
+        return None
+    for pack in Config.STAR_PACKAGES:
+        if pack["id"] == package_id:
+            return pack
+    return None
+
+
+def _build_invoice_link(package: Dict[str, Any]) -> Optional[str]:
+    endpoint = f"https://api.telegram.org/bot{Config.TELEGRAM_BOT_TOKEN}/createInvoiceLink"
+    payload = {
+        "title": package["name"],
+        "description": package.get("description", ""),
+        "payload": package["id"],
+        "currency": "XTR",
+        "prices": json.dumps(
+            [{"label": package["name"], "amount": int(package["stars"])}]
+        ),
+    }
+    if package.get("art_url"):
+        payload["photo_url"] = package["art_url"]
+
+    try:
+        response = requests.post(endpoint, data=payload, timeout=8)
+    except requests.RequestException:
+        return None
+
+    if not response.ok:
+        return None
+    data = response.json()
+    if not data.get("ok"):
+        return None
+    return data.get("result")
+
+
+def _state_with_daily(session, user: User) -> Dict[str, Any]:
+    payload = serialize_user_state(user)
+    daily_state = _get_daily_state(session, user)
+    payload["daily"] = serialize_daily_state(daily_state)
+    return payload
 
 @app.before_request
 def bootstrap_catalogs():
@@ -97,12 +209,41 @@ def redeem_reward(token):
                 message="❌ You don’t have a SharkSpin account yet! Use /start first.",
             )
 
+        sticker_pull_summaries: list[str] = []
+        albums_completed = 0
+
         if rl.reward_type == "coins":
             user.coins += rl.amount
         elif rl.reward_type == "energy":
             user.energy += rl.amount
         elif rl.reward_type == "spins":
             user.energy += rl.amount * Config.ENERGY_PER_SPIN
+        elif rl.reward_type == "wheel_tokens":
+            user.wheel_tokens += rl.amount
+        elif rl.reward_type == "sticker_pack":
+            ensure_default_albums(s)
+            albums = (
+                s.query(StickerAlbum)
+                .options(joinedload(StickerAlbum.stickers))
+                .order_by(StickerAlbum.id)
+                .all()
+            )
+            if not albums:
+                return render_template(
+                    "redeem.html",
+                    message="⚠️ No sticker albums are configured yet. Add albums before issuing sticker pack rewards.",
+                )
+
+            for _ in range(max(int(rl.amount), 0)):
+                album = random.choice(albums)
+                pulled = pull_sticker(s, user, album)
+                sticker_info = grant_sticker(s, user, pulled)
+                summary = f"{pulled.name} ({pulled.rarity}) from {album.name}"
+                if sticker_info["album_completed"]:
+                    if complete_album(s, user, album):
+                        albums_completed += 1
+                        summary += " — Album completed!"
+                sticker_pull_summaries.append(summary)
         else:
             return render_template("redeem.html", message="❌ Invalid reward type.")
 
@@ -117,11 +258,17 @@ def redeem_reward(token):
             "energy": f"{rl.amount} Energy ⚡",
             "spins": f"{rl.amount} Free Spins 🎰",
             "wheel_tokens": f"{rl.amount} Wheel Tokens 🌀",
-            "sticker_pack": f"{rl.amount} Sticker Pack Tokens 📔",
+            "sticker_pack": f"{rl.amount} Sticker Packs 📔",
         }
         reward_text = reward_text_map.get(rl.reward_type, f"{rl.amount} {rl.reward_type}")
         remaining = max(rl.uses_left, 0)
-        msg = f"🎁 You received {reward_text}! ({remaining} uses left)"
+        details = ""
+        if sticker_pull_summaries:
+            pulls = "; ".join(sticker_pull_summaries)
+            details = f"\nOpened packs: {pulls}"
+            if albums_completed:
+                details += f"\nAlbums completed: {albums_completed}"
+        msg = f"🎁 You received {reward_text}! ({remaining} uses left){details}"
         return render_template("redeem.html", message=msg)
 
 
@@ -146,17 +293,20 @@ def api_auth():
             s.add(user)
             s.commit()
         token = signer.dumps({"u": tg_user_id})
-        payload = serialize_user_state(user)
+        payload = _state_with_daily(s, user)
         payload.update({"ok": True, "token": token})
         return jsonify(payload)
 
 
 def serialize_user_state(user: User) -> Dict[str, Any]:
+    progress = _level_progress(user)
     return {
         "coins": user.coins,
         "energy": user.energy,
         "level": user.level,
         "wheel_tokens": user.wheel_tokens,
+        "total_earned": getattr(user, "total_earned", 0),
+        "progress": progress,
         "last_wheel_spin_at": user.last_wheel_spin_at.isoformat()
         if user.last_wheel_spin_at
         else None,
@@ -195,7 +345,7 @@ def api_spin():
             "payout": payout,
             "result": result_data,
         }
-        response.update(serialize_user_state(user))
+        response.update(_state_with_daily(s, user))
         return jsonify(response)
 
 
@@ -205,7 +355,147 @@ def api_me():
     user = _get_user_from_token(token)
     if not user:
         abort(401)
-    return jsonify({"ok": True, **serialize_user_state(user)})
+    with Session() as s:
+        user = s.merge(user)
+        payload = _state_with_daily(s, user)
+        return jsonify({"ok": True, **payload})
+
+
+@app.get("/api/daily")
+def api_daily():
+    token = request.args.get("token")
+    user = _get_user_from_token(token)
+    if not user:
+        abort(401)
+    with Session() as s:
+        user = s.merge(user)
+        state = _state_with_daily(s, user)
+        state.update({"milestones": Config.DAILY_MILESTONES})
+        return jsonify({"ok": True, **state})
+
+
+@app.post("/api/daily/claim")
+def api_daily_claim():
+    payload = request.get_json(force=True)
+    token = payload.get("token")
+    user = _get_user_from_token(token)
+    if not user:
+        abort(401)
+
+    with Session() as s:
+        user = s.merge(user)
+        state = _get_daily_state(s, user)
+        now = datetime.utcnow()
+        if state.last_claim_at and (now - state.last_claim_at) > timedelta(hours=48):
+            state.streak = 0
+        if state.last_claim_at and (now - state.last_claim_at) < timedelta(hours=24):
+            return jsonify(
+                {
+                    "ok": False,
+                    "error": "Daily reward already claimed. Come back later!",
+                    "daily": serialize_daily_state(state),
+                }
+            ), 200
+
+        reward = _daily_reward_values(state.streak + 1)
+        user.coins += reward.get("coins", 0)
+        user.energy += reward.get("energy", 0)
+        user.wheel_tokens += reward.get("wheel_tokens", 0)
+
+        state.streak += 1
+        state.total_claims += 1
+        state.last_claim_at = now
+
+        response_state = _state_with_daily(s, user)
+        response_state.update(
+            {
+                "ok": True,
+                "reward": reward,
+                "claimed_at": now.isoformat(),
+                "milestones": Config.DAILY_MILESTONES,
+            }
+        )
+        s.commit()
+        return jsonify(response_state)
+
+
+@app.get("/api/shop")
+def api_shop():
+    token = request.args.get("token")
+    user = _get_user_from_token(token)
+    if not user:
+        abort(401)
+    packages = [
+        {
+            "id": pack["id"],
+            "name": pack["name"],
+            "stars": pack["stars"],
+            "energy": pack["energy"],
+            "bonus_spins": pack.get("bonus_spins", 0),
+            "description": pack.get("description", ""),
+            "art_url": pack.get("art_url"),
+        }
+        for pack in Config.STAR_PACKAGES
+    ]
+    with Session() as s:
+        user = s.merge(user)
+        state = _state_with_daily(s, user)
+        state.update({"packages": packages})
+        return jsonify({"ok": True, **state})
+
+
+@app.post("/api/shop/order")
+def api_shop_order():
+    payload = request.get_json(force=True)
+    token = payload.get("token")
+    package_id = payload.get("package_id")
+    user = _get_user_from_token(token)
+    if not user:
+        abort(401)
+
+    package = _find_package(package_id)
+    if not package:
+        return jsonify({"ok": False, "error": "Package not found"}), 200
+
+    invoice_url = _build_invoice_link(package)
+    fallback = None
+    if not invoice_url and Config.BOT_USERNAME:
+        fallback = f"https://t.me/{Config.BOT_USERNAME}?start=buy_{package['id']}"
+
+    response: Dict[str, Any] = {
+        "ok": True,
+        "package": {
+            "id": package["id"],
+            "name": package["name"],
+            "stars": package["stars"],
+            "energy": package["energy"],
+            "bonus_spins": package.get("bonus_spins", 0),
+        },
+        "invoice_url": invoice_url,
+        "fallback_url": fallback,
+    }
+    if not invoice_url:
+        response["warning"] = "Invoice link could not be created automatically."
+    return jsonify(response)
+
+
+@app.get("/api/catalog")
+def api_catalog():
+    token = request.args.get("token")
+    user = _get_user_from_token(token)
+    if not user:
+        abort(401)
+    with Session() as s:
+        user = s.merge(user)
+        state = _state_with_daily(s, user)
+        state.update(
+            {
+                "taskbar": TASKBAR_LINKS,
+                "guide": GUIDE_SECTIONS,
+                "callouts": DASHBOARD_FACTS,
+            }
+        )
+        return jsonify({"ok": True, **state})
 
 
 @app.get("/api/wheel")
@@ -215,6 +505,7 @@ def api_wheel_catalog():
     if not user:
         abort(401)
     with Session() as s:
+        user = s.merge(user)
         rewards = s.query(WheelReward).all()
         data = [
             {
@@ -227,7 +518,8 @@ def api_wheel_catalog():
             }
             for r in rewards
         ]
-        return jsonify({"ok": True, "rewards": data, **serialize_user_state(user)})
+        state = _state_with_daily(s, user)
+        return jsonify({"ok": True, "rewards": data, **state})
 
 
 @app.post("/api/wheel/spin")
@@ -270,7 +562,7 @@ def api_wheel_spin():
                 "amount": reward.amount,
             },
         }
-        response.update(serialize_user_state(user))
+        response.update(_state_with_daily(s, user))
         return jsonify(response)
 
 
@@ -328,7 +620,8 @@ def api_stickers():
                     "reward_claimed": album.id in completions,
                 }
             )
-        return jsonify({"ok": True, "albums": payload, **serialize_user_state(user)})
+        state = _state_with_daily(s, user)
+        return jsonify({"ok": True, "albums": payload, **state})
 
 
 @app.post("/api/stickers/open")
@@ -362,13 +655,13 @@ def api_open_sticker_pack():
                 "album_completed": sticker_info["album_completed"],
             },
         }
-        response.update(serialize_user_state(user))
+        response.update(_state_with_daily(s, user))
         response["album_rewarded"] = False
         if sticker_info["album_completed"]:
             rewarded = complete_album(s, user, album)
             if rewarded:
                 s.commit()
-                response.update(serialize_user_state(user))
+                response.update(_state_with_daily(s, user))
                 response["album_rewarded"] = True
         s.commit()
         return jsonify(response)
@@ -390,7 +683,8 @@ def api_events():
             for ep in s.query(EventProgress).filter(EventProgress.user_id == user.id)
         }
         payload = [serialize_event(evt, progress_map.get(evt.id)) for evt in events]
-        return jsonify({"ok": True, "events": payload, **serialize_user_state(user)})
+        state = _state_with_daily(s, user)
+        return jsonify({"ok": True, "events": payload, **state})
 
 
 if __name__ == "__main__":

@@ -1,16 +1,7 @@
 import logging
-from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
-    LabeledPrice,
-    ReplyKeyboardMarkup,
-    Update,
-    WebAppInfo,
-)
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
 from telegram.ext import (
     Application,
-    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -44,17 +35,10 @@ def get_star_package(package_id: str | None):
     return None
 
 
-def build_star_keyboard():
-    buttons = [
-        [
-            InlineKeyboardButton(
-                f"{pack['name']} ({pack['stars']}⭐)",
-                callback_data=f"buy:{pack['id']}",
-            )
-        ]
-        for pack in Config.STAR_PACKAGES
-    ]
-    return InlineKeyboardMarkup(buttons)
+def build_webapp_markup(label: str = "Open SharkSpin"):
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton(label, web_app=WebAppInfo(Config.WEBAPP_URL))]]
+    )
 
 
 async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -114,7 +98,7 @@ async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = f"https://t.me/{bot_username}/startapp?startapp=redeem_{token}"
 
     markup = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("🎁 Open reward in SharkSpin", url=url)]]
+        [[InlineKeyboardButton("🎁 Open reward in SharkSpin", web_app=WebAppInfo(url))]]
     )
 
     summary = (
@@ -144,19 +128,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not pack:
             await update.message.reply_text("⚠️ That Star pack is no longer available.")
             return
-        await send_star_invoice(update, context, pack)
+        await update.message.reply_text(
+            "Use the SharkSpin mini app to purchase Star packs. Tap below to open the Star Shop tab.",
+            reply_markup=build_webapp_markup("Open Star Shop"),
+        )
         return
 
     text = (
         "🦈 Welcome to SharkSpin!\n\n"
-        "Every spin, shop item, album, and leaderboard now lives inside the mini app interface.\n"
-        "Launch it below whenever you need to manage rewards or explore updates.\n\n"
+        "All spins, purchases, albums, and help live inside the SharkSpin mini app.\n"
+        "Tap below to launch the command deck any time.\n\n"
         "Commands:\n"
-        "/play – open mini app\n"
-        "/buy – Star shop menu\n"
-        "/me – show your balance"
+        "/start – welcome message\n"
+        "/me – show your balance\n"
+        "/buy – Star shop details"
     )
-    await update.message.reply_text(text, reply_markup=build_star_keyboard())
+    await update.message.reply_text(text, reply_markup=build_webapp_markup())
 
 
 async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -189,45 +176,17 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         )
         await update.message.reply_text(
-            "⭐ Star Shop Packs:\n" + menu,
-            reply_markup=build_star_keyboard(),
+            "⭐ Star Shop Packs (manage inside the mini app):\n"
+            + menu
+            + "\n\nTap below to open the Star Shop tab.",
+            reply_markup=build_webapp_markup("Open Star Shop"),
         )
         return
 
-    await send_star_invoice(update, context, pack)
-
-
-async def send_star_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE, pack: dict):
-    title = pack["name"]
-    description = pack.get(
-        "description",
-        f"Buy {pack['energy']} energy and {pack['bonus_spins']} wheel tokens.",
+    await update.message.reply_text(
+        "Purchases are now completed inside the SharkSpin mini app. Tap below to open the Star Shop tab.",
+        reply_markup=build_webapp_markup("Open Star Shop"),
     )
-    payload = pack["id"]
-    prices = [LabeledPrice(label=pack["name"], amount=pack["stars"])]
-
-    await context.bot.send_invoice(
-        chat_id=update.effective_chat.id,
-        title=title,
-        description=description,
-        payload=payload,
-        provider_token="",
-        currency=CURRENCY,
-        prices=prices,
-    )
-
-
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    data = query.data or ""
-    if data.startswith("buy:"):
-        pack_id = data.split(":", 1)[1]
-        pack = get_star_package(pack_id)
-        if not pack:
-            await query.edit_message_text("⚠️ This Star pack is unavailable.")
-            return
-        await send_star_invoice(update, context, pack)
 
 
 async def precheckout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -279,7 +238,6 @@ def main_polling():
     app.add_handler(CommandHandler("reward", reward))
     app.add_handler(CommandHandler("me", me))
     app.add_handler(CommandHandler("buy", buy))
-    app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(PreCheckoutQueryHandler(precheckout_handler))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
     app.run_polling(close_loop=False)

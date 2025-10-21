@@ -1,4 +1,5 @@
 import random
+from collections import Counter
 from datetime import datetime, timedelta
 from typing import Dict, List, Sequence, Tuple
 
@@ -15,15 +16,20 @@ from models import (
 )
 
 
-SYMBOLS: Sequence[str] = ("🦈", "💎", "🪙", "🍋", "🎲", "🔱")
-SYMBOL_WEIGHTS: Sequence[float] = (0.24, 0.16, 0.16, 0.22, 0.17, 0.05)
+SYMBOL_DEFINITIONS: Sequence[Tuple[str, float, Dict[str, int]]] = (
+    ("🪙", 0.24, {"coins": 60}),
+    ("⚡", 0.2, {"energy": 4}),
+    ("🌀", 0.18, {"wheel_tokens": 1}),
+    ("💠", 0.16, {"coins": 110}),
+    ("🦈", 0.12, {"coins": 160, "energy": 6}),
+    ("🎁", 0.1, {"coins": 90, "wheel_tokens": 1}),
+)
 
 SYMBOLS: Sequence[str] = tuple(sym for sym, _, _ in SYMBOL_DEFINITIONS)
 SYMBOL_WEIGHTS: Sequence[float] = tuple(weight for _, weight, _ in SYMBOL_DEFINITIONS)
 SYMBOL_REWARD_BASE: Dict[str, Dict[str, int]] = {
     sym: base for sym, _, base in SYMBOL_DEFINITIONS
 }
-SHARK_SYMBOL = "🦈"
 
 # --- Slot Machine Logic ----------------------------------------------------
 
@@ -38,32 +44,64 @@ def can_spin(user: User, multiplier: int) -> Tuple[bool, str]:
 def apply_spin(user: User, multiplier: int = 1):
     ok, msg = can_spin(user, multiplier)
     if not ok:
-        return False, msg, 0, {"symbols": ("🪙", "🪙", "🪙"), "label": "No Spin"}
+        return False, msg, 0, {"symbols": ("🪙", "🪙", "🪙"), "label": "No Spin", "rewards": {}}
 
     user.energy -= Config.ENERGY_PER_SPIN * multiplier
 
     reels = [roll_symbol() for _ in range(3)]
-    payout, label = calc_payout(reels, multiplier)
+    rewards, label = calc_payout(reels, multiplier)
 
-    user.coins += payout
-    user.total_earned += payout
+    coins_delta = rewards.get("coins", 0)
+    energy_delta = rewards.get("energy", 0)
+    wheel_delta = rewards.get("wheel_tokens", 0)
+
+    user.coins += coins_delta
+    user.energy += energy_delta
+    user.wheel_tokens += wheel_delta
+    user.total_earned += coins_delta
     user.level = max(1, 1 + int((user.total_earned / 1200) ** 0.6))
 
-    return True, "", payout, {"symbols": reels, "label": label}
+    return True, "", coins_delta, {"symbols": reels, "label": label, "rewards": rewards}
 
 
 def roll_symbol() -> str:
     return random.choices(SYMBOLS, SYMBOL_WEIGHTS)[0]
 
 
-def calc_payout(reels: Sequence[str], mult: int) -> Tuple[int, str]:
-    if reels[0] == reels[1] == reels[2]:
-        return 600 * mult, "Triple Match"
-    if len(set(reels)) == 2:
-        return 75 * mult, "Double Match"
-    if "🦈" in reels:
-        return 10 * mult, "Shark Spot"
-    return 5 * mult, "Lucky Swim"
+def calc_symbol_rewards(reels: Sequence[str]) -> Dict[str, int]:
+    rewards = {"coins": 0, "energy": 0, "wheel_tokens": 0}
+    for symbol in reels:
+        base = SYMBOL_REWARD_BASE.get(symbol, {})
+        for key, value in base.items():
+            rewards[key] = rewards.get(key, 0) + value
+    return rewards
+
+
+def calc_payout(reels: Sequence[str], mult: int) -> Tuple[Dict[str, int], str]:
+    counts = Counter(reels)
+    base_rewards = calc_symbol_rewards(reels)
+    reward_multiplier = mult
+    label = "Cascade"
+
+    if len(counts) == 1:
+        label = "Jackpot Triple"
+        reward_multiplier *= 3
+    elif any(count == 2 for count in counts.values()):
+        label = "Twin Surge"
+        reward_multiplier *= 2
+    elif "🦈" in counts:
+        label = "Shark Resonance"
+        reward_multiplier = int(reward_multiplier * 1.5)
+
+    adjusted = {
+        key: int(value * reward_multiplier)
+        for key, value in base_rewards.items()
+        if value
+    }
+    # ensure keys exist even if zero for consistent client rendering
+    for key in ("coins", "energy", "wheel_tokens"):
+        adjusted.setdefault(key, 0)
+    return adjusted, label
 
 
 # --- Wheel Of Fortune ------------------------------------------------------

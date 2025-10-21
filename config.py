@@ -17,6 +17,7 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.getenv(
         "TELEGRAM_BOT_TOKEN", "8220458714:AAHJeibywqHXQf1bJp0bQbvjpEO0gaLhQOM"
     )
+    BOT_USERNAME = os.getenv("BOT_USERNAME", "SharkSpinBot")
     ADMIN_SECRET = os.getenv("ADMIN_SECRET", "super-shark-admin")
 
     # Game economy
