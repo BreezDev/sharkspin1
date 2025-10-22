@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SharkSpin Admin Deck</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/admin.css" />
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    <header class="admin-hero">
+      <div class="admin-hero-copy">
+        <h1>SharkSpin Admin Deck</h1>
+        <p>Fine-tune slot rewards, events, shop bundles, and leaderboard payouts to mirror the Boinkers-grade experience.</p>
+      </div>
+      <img src="/static/images/admin-dashboard.svg" alt="Admin" class="admin-hero-art" />
+    </header>
+
+    <section class="admin-secret">
+      <label for="secretInput">Admin Secret</label>
+      <input type="password" id="secretInput" placeholder="Enter admin secret" autocomplete="off" />
+      <button id="loadOverview" class="primary">Load Overview</button>
+      <div id="adminStatus" class="admin-status"></div>
+    </section>
+
+    <main class="admin-grid">
+      <section class="admin-card" id="slotSymbolsCard">
+        <header>
+          <h2>Slot Symbols</h2>
+          <p>Adjust emoji, payout mix, and weighting for reel outcomes. Set a symbol to zero rewards for “Empty Net” misses.</p>
+        </header>
+        <div id="symbolList" class="admin-list"></div>
+        <form id="symbolForm" class="admin-form">
+          <h3>Add / Update Symbol</h3>
+          <div class="form-row">
+            <label>Symbol Emoji <input name="emoji" required maxlength="3" /></label>
+            <label>Name <input name="name" required /></label>
+            <label>Weight <input name="weight" type="number" step="0.1" value="1.0" /></label>
+            <label>Sort Order <input name="sort_order" type="number" value="0" /></label>
+          </div>
+          <div class="form-row">
+            <label>Coins <input name="coins" type="number" value="0" /></label>
+            <label>Energy <input name="energy" type="number" value="0" /></label>
+            <label>Wheel Tokens <input name="wheel_tokens" type="number" value="0" /></label>
+            <label>Color <input name="color" type="color" value="#22d3ee" /></label>
+          </div>
+          <label>Description <input name="description" /></label>
+          <label>Art URL <input name="art_url" placeholder="/static/images/..." /></label>
+          <input type="hidden" name="id" />
+          <button type="submit" class="primary">Save Symbol</button>
+        </form>
+      </section>
+
+      <section class="admin-card" id="wheelCard">
+        <header>
+          <h2>Wheel Rewards</h2>
+          <p>Set fortune wheel slices, weights, and colors.</p>
+        </header>
+        <div id="wheelList" class="admin-list"></div>
+        <form id="wheelForm" class="admin-form">
+          <h3>Add / Update Wheel Slice</h3>
+          <div class="form-row">
+            <label>Label <input name="label" required /></label>
+            <label>Type
+              <select name="reward_type">
+                <option value="coins">Coins</option>
+                <option value="energy">Energy</option>
+                <option value="spins">Spins</option>
+                <option value="wheel_tokens">Wheel Tokens</option>
+                <option value="sticker_pack">Sticker Pack</option>
+              </select>
+            </label>
+            <label>Amount <input name="amount" type="number" value="0" /></label>
+            <label>Weight <input name="weight" type="number" step="0.1" value="1.0" /></label>
+            <label>Color <input name="color" type="color" value="#00ffff" /></label>
+          </div>
+          <input type="hidden" name="id" />
+          <button type="submit" class="primary">Save Slice</button>
+        </form>
+      </section>
+
+      <section class="admin-card" id="shopCard">
+        <header>
+          <h2>Shop Bundles</h2>
+          <p>Create or retire energy bundles and wheel bonuses.</p>
+        </header>
+        <div id="shopList" class="admin-list"></div>
+        <form id="shopForm" class="admin-form">
+          <h3>Add / Update Bundle</h3>
+          <div class="form-row">
+            <label>Name <input name="name" required /></label>
+            <label>Slug <input name="slug" required /></label>
+            <label>Stars <input name="stars" type="number" value="0" /></label>
+            <label>Energy <input name="energy" type="number" value="0" /></label>
+            <label>Bonus Spins <input name="bonus_spins" type="number" value="0" /></label>
+            <label>Sort Order <input name="sort_order" type="number" value="0" /></label>
+          </div>
+          <label>Description <input name="description" /></label>
+          <label>Art URL <input name="art_url" placeholder="/static/images/..." /></label>
+          <label><input type="checkbox" name="is_active" checked /> Active</label>
+          <input type="hidden" name="id" />
+          <button type="submit" class="primary">Save Bundle</button>
+        </form>
+      </section>
+
+      <section class="admin-card" id="eventsCard">
+        <header>
+          <h2>Live & Seasonal Events</h2>
+          <p>Orchestrate limited-time tournaments with banner art.</p>
+        </header>
+        <div id="eventsList" class="admin-list"></div>
+        <form id="eventForm" class="admin-form">
+          <h3>Add / Update Event</h3>
+          <div class="form-row">
+            <label>Name <input name="name" required /></label>
+            <label>Slug <input name="slug" required /></label>
+            <label>Type
+              <select name="event_type">
+                <option value="live">Live</option>
+                <option value="seasonal">Seasonal</option>
+                <option value="limited">Limited</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label>Start <input name="start_at" type="datetime-local" /></label>
+            <label>End <input name="end_at" type="datetime-local" /></label>
+            <label>Target Spins <input name="target_spins" type="number" value="100" /></label>
+            <label>Reward Type
+              <select name="reward_type">
+                <option value="coins">Coins</option>
+                <option value="energy">Energy</option>
+                <option value="spins">Spins</option>
+                <option value="wheel_tokens">Wheel Tokens</option>
+              </select>
+            </label>
+            <label>Reward Amount <input name="reward_amount" type="number" value="0" /></label>
+          </div>
+          <label>Banner URL <input name="banner_url" placeholder="/static/images/events/..." /></label>
+          <label>Description <textarea name="description" rows="2"></textarea></label>
+          <input type="hidden" name="id" />
+          <button type="submit" class="primary">Save Event</button>
+        </form>
+      </section>
+
+      <section class="admin-card" id="rewardLinksCard">
+        <header>
+          <h2>Reward Links & Broadcasts</h2>
+          <p>Generate redeemable rewards and broadcast announcements with deep links.</p>
+        </header>
+        <form id="rewardLinkForm" class="admin-form">
+          <h3>Create Reward Link</h3>
+          <div class="form-row">
+            <label>Reward Type
+              <select name="reward_type">
+                <option value="coins">Coins</option>
+                <option value="energy">Energy</option>
+                <option value="spins">Spins</option>
+                <option value="wheel_tokens">Wheel Tokens</option>
+                <option value="sticker_pack">Sticker Pack</option>
+              </select>
+            </label>
+            <label>Amount <input name="amount" type="number" value="100" /></label>
+            <label>Uses <input name="uses" type="number" value="1" /></label>
+            <label>Title <input name="title" /></label>
+          </div>
+          <label>Note <input name="note" /></label>
+          <button type="submit" class="primary">Create Link</button>
+          <div id="rewardLinkResult" class="admin-result"></div>
+        </form>
+
+        <form id="broadcastForm" class="admin-form">
+          <h3>Broadcast Message</h3>
+          <label>Title <input name="title" required /></label>
+          <label>Body <textarea name="body" rows="3" required></textarea></label>
+          <label>Reward URL <input name="reward_url" placeholder="Paste link from above" /></label>
+          <button type="submit" class="primary">Send Broadcast</button>
+        </form>
+
+        <div class="admin-history">
+          <h3>Recent Reward Links</h3>
+          <ul id="rewardLinkList"></ul>
+          <h3>Broadcast Log</h3>
+          <ul id="broadcastList"></ul>
+        </div>
+      </section>
+
+      <section class="admin-card" id="leaderboardCard">
+        <header>
+          <h2>Leaderboard Tools</h2>
+          <p>Review weekly coin leaders and push manual rewards.</p>
+        </header>
+        <div id="leaderboardPreview" class="admin-list"></div>
+        <form id="leaderboardRewardForm" class="admin-form">
+          <h3>Reward Weekly Leaders</h3>
+          <div class="form-row">
+            <label>Top N <input name="top_n" type="number" value="3" /></label>
+            <label>Reward Type
+              <select name="reward_type">
+                <option value="coins">Coins</option>
+                <option value="energy">Energy</option>
+                <option value="spins">Spins</option>
+                <option value="wheel_tokens">Wheel Tokens</option>
+              </select>
+            </label>
+            <label>Amount <input name="amount" type="number" value="500" /></label>
+          </div>
+          <button type="submit" class="primary">Grant Reward</button>
+        </form>
+        <button id="resetLeaderboard" class="danger">Reset Weekly Scores</button>
+      </section>
+    </main>
+  </div>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

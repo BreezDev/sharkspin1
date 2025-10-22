@@ -18,6 +18,7 @@ from models import (
     EventProgress,
     LiveEvent,
     RewardLink,
+    ShopItem,
     Spin,
     StickerAlbum,
     User,
@@ -29,12 +30,16 @@ from game_logic import (
     apply_spin,
     complete_album,
     ensure_default_albums,
+    ensure_default_shop_items,
+    ensure_default_slot_symbols,
     ensure_default_wheel_rewards,
     ensure_demo_event,
     grant_sticker,
     pull_sticker,
+    refresh_level,
     record_event_spin,
     serialize_event,
+    xp_threshold,
     spin_wheel,
 )
 
@@ -46,24 +51,24 @@ app.config.from_object(Config)
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, future=True)
 Session = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 Base.metadata.create_all(engine)
+app.config["SESSION_FACTORY"] = Session
+
+try:
+    from adminpanel import admin_bp
+
+    app.register_blueprint(admin_bp)
+except Exception:
+    admin_bp = None
 
 # Sign mini app init data (optional – extra layer beyond Telegram WebApp initData)
 signer = URLSafeSerializer(Config.SECRET_KEY, salt="sharkspin:webapp")
 reward_signer = URLSafeSerializer(Config.SECRET_KEY, salt="sharkspin:reward")
 
 
-def _xp_threshold(level_index: int) -> int:
-    curve = Config.LEVEL_XP_CURVE
-    if level_index < len(curve):
-        return curve[level_index]
-    extra_steps = level_index - (len(curve) - 1)
-    return curve[-1] + max(extra_steps, 0) * 500
-
-
 def _level_progress(user: User) -> Dict[str, Any]:
     current_level = max(user.level, 1)
-    floor = _xp_threshold(current_level - 1)
-    ceiling = _xp_threshold(current_level)
+    floor = xp_threshold(current_level - 1)
+    ceiling = xp_threshold(current_level)
     current_xp = getattr(user, "total_earned", 0)
     gained = max(0, current_xp - floor)
     span = max(1, ceiling - floor)
@@ -120,10 +125,23 @@ def serialize_daily_state(state: DailyRewardState) -> Dict[str, Any]:
 def _find_package(package_id: str | None) -> Optional[Dict[str, Any]]:
     if not package_id:
         return None
-    for pack in Config.STAR_PACKAGES:
-        if pack["id"] == package_id:
-            return pack
-    return None
+    with Session() as s:
+        item = (
+            s.query(ShopItem)
+            .filter(ShopItem.slug == package_id, ShopItem.is_active.is_(True))
+            .one_or_none()
+        )
+        if not item:
+            return None
+        return {
+            "id": item.slug,
+            "name": item.name,
+            "stars": item.stars,
+            "energy": item.energy,
+            "bonus_spins": item.bonus_spins,
+            "description": item.description,
+            "art_url": item.art_url,
+        }
 
 
 def _build_invoice_link(package: Dict[str, Any]) -> Optional[str]:
@@ -166,6 +184,8 @@ def bootstrap_catalogs():
         ensure_default_wheel_rewards(s)
         ensure_default_albums(s)
         ensure_demo_event(s)
+        ensure_default_slot_symbols(s)
+        ensure_default_shop_items(s)
 
 
 @app.get("/")
@@ -214,6 +234,9 @@ def redeem_reward(token):
 
         if rl.reward_type == "coins":
             user.coins += rl.amount
+            user.total_earned += rl.amount
+            user.weekly_coins = max(0, (user.weekly_coins or 0) + rl.amount)
+            refresh_level(user)
         elif rl.reward_type == "energy":
             user.energy += rl.amount
         elif rl.reward_type == "spins":
@@ -306,6 +329,8 @@ def serialize_user_state(user: User) -> Dict[str, Any]:
         "level": user.level,
         "wheel_tokens": user.wheel_tokens,
         "total_earned": getattr(user, "total_earned", 0),
+        "weekly_coins": getattr(user, "weekly_coins", 0),
+        "energy_per_spin": Config.ENERGY_PER_SPIN,
         "progress": progress,
         "last_wheel_spin_at": user.last_wheel_spin_at.isoformat()
         if user.last_wheel_spin_at
@@ -333,7 +358,7 @@ def api_spin():
         abort(401)
     with Session() as s:
         user = s.merge(user)
-        ok, msg, payout, result_data = apply_spin(user, multiplier=multiplier)
+        ok, msg, payout, result_data = apply_spin(s, user, multiplier=multiplier)
         if not ok:
             return jsonify({"ok": False, "error": msg}), 200
         rec = Spin(user_id=user.id, delta_coins=payout, result=result_data["label"])
@@ -401,6 +426,10 @@ def api_daily_claim():
         user.coins += reward.get("coins", 0)
         user.energy += reward.get("energy", 0)
         user.wheel_tokens += reward.get("wheel_tokens", 0)
+        if reward.get("coins"):
+            user.total_earned += reward.get("coins", 0)
+            user.weekly_coins = max(0, (user.weekly_coins or 0) + reward.get("coins", 0))
+            refresh_level(user)
 
         state.streak += 1
         state.total_claims += 1
@@ -425,20 +454,23 @@ def api_shop():
     user = _get_user_from_token(token)
     if not user:
         abort(401)
-    packages = [
-        {
-            "id": pack["id"],
-            "name": pack["name"],
-            "stars": pack["stars"],
-            "energy": pack["energy"],
-            "bonus_spins": pack.get("bonus_spins", 0),
-            "description": pack.get("description", ""),
-            "art_url": pack.get("art_url"),
-        }
-        for pack in Config.STAR_PACKAGES
-    ]
     with Session() as s:
         user = s.merge(user)
+        ensure_default_shop_items(s)
+        packages = [
+            {
+                "id": item.slug,
+                "name": item.name,
+                "stars": item.stars,
+                "energy": item.energy,
+                "bonus_spins": item.bonus_spins,
+                "description": item.description,
+                "art_url": item.art_url,
+            }
+            for item in s.query(ShopItem)
+            .filter(ShopItem.is_active.is_(True))
+            .order_by(ShopItem.sort_order.asc(), ShopItem.id.asc())
+        ]
         state = _state_with_daily(s, user)
         state.update({"packages": packages})
         return jsonify({"ok": True, **state})
@@ -685,6 +717,48 @@ def api_events():
         payload = [serialize_event(evt, progress_map.get(evt.id)) for evt in events]
         state = _state_with_daily(s, user)
         return jsonify({"ok": True, "events": payload, **state})
+
+
+@app.get("/api/leaderboard")
+def api_leaderboard():
+    token = request.args.get("token")
+    user = _get_user_from_token(token)
+    if not user:
+        abort(401)
+
+    with Session() as s:
+        user = s.merge(user)
+        top_players = (
+            s.query(User)
+            .order_by(User.weekly_coins.desc(), User.total_earned.desc())
+            .limit(Config.LEADERBOARD_SIZE)
+            .all()
+        )
+        leaders = [
+            {
+                "position": idx + 1,
+                "user_id": p.id,
+                "tg_user_id": p.tg_user_id,
+                "username": p.username or f"Captain {p.id}",
+                "weekly_coins": p.weekly_coins or 0,
+                "level": p.level,
+            }
+            for idx, p in enumerate(top_players)
+        ]
+
+        my_rank = next((entry["position"] for entry in leaders if entry["user_id"] == user.id), None)
+
+        return jsonify(
+            {
+                "ok": True,
+                "leaders": leaders,
+                "me": {
+                    "position": my_rank,
+                    "weekly_coins": user.weekly_coins or 0,
+                    "level": user.level,
+                },
+            }
+        )
 
 
 if __name__ == "__main__":

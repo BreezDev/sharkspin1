@@ -1,0 +1,28 @@
+<svg width="320" height="220" viewBox="0 0 320 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#9333ea" />
+    </linearGradient>
+    <linearGradient id="grad-shark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="320" height="220" rx="28" fill="url(#grad-bg)" />
+  <g filter="url(#shadow)">
+    <path d="M92 126C104 90 144 68 178 72C202 74 222 92 238 120C252 144 246 170 226 186C206 202 176 204 150 190L120 206L122 174C102 160 84 148 92 126Z" fill="url(#grad-shark)" />
+    <path d="M150 110C156 104 168 100 178 102C188 104 196 110 200 120C202 128 198 134 190 136C182 138 172 136 164 130L150 140L150 110Z" fill="#0f172a" opacity="0.4" />
+    <path d="M136 118C144 110 154 104 170 106" stroke="#f8fafc" stroke-width="6" stroke-linecap="round" />
+    <circle cx="194" cy="118" r="12" fill="#f8fafc" />
+    <circle cx="194" cy="118" r="6" fill="#0f172a" />
+  </g>
+  <g opacity="0.5">
+    <circle cx="60" cy="60" r="14" fill="#facc15" />
+    <circle cx="270" cy="40" r="10" fill="#38bdf8" />
+    <circle cx="280" cy="160" r="16" fill="#f472b6" />
+  </g>
+  <filter id="shadow" x="60" y="60" width="200" height="170" color-interpolation-filters="sRGB">
+    <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.45" />
+  </filter>
+</svg>

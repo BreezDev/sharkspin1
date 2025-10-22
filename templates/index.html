@@ -11,7 +11,7 @@
   <div class="app-shell">
     <header class="masthead">
       <div class="hero">
-        <img src="/static/images/hero-shark.svg" alt="SharkSpin" class="hero-art" />
+        <img src="/static/images/hero-boinkers.svg" alt="SharkSpin" class="hero-art" />
         <div class="hero-copy">
           <h1>SharkSpin Command Deck</h1>
           <p>Dive into the slot bay, charge the Wheel of Tides, and manage your crew without leaving the mini app.</p>
@@ -37,6 +37,11 @@
         <div class="stat-card">
           <span class="label">Wheel Tokens</span>
           <span class="value" id="wheelTokens">0</span>
+        </div>
+        <div class="stat-card highlight">
+          <span class="label">Weekly SharkCoins</span>
+          <span class="value" id="weeklyCoins">0</span>
+          <small class="caption">Climb the Apex board before reset</small>
         </div>
       </div>
     </header>
@@ -75,10 +80,7 @@
             </div>
           </div>
           <div class="multiplier-buttons">
-            <button class="chip active" data-mult="1">x1</button>
-            <button class="chip" data-mult="2">x2</button>
-            <button class="chip" data-mult="3">x3</button>
-            <button class="chip" data-mult="5">x5</button>
+            <!-- multiplier chips injected via JS -->
           </div>
           <div class="slot-actions">
             <button id="spinBtn" class="primary large">Spin the Main Cab 🎰</button>
@@ -94,6 +96,10 @@
         <div class="panel events-panel">
           <h2>Live Events</h2>
           <div id="eventsList" class="events-list"></div>
+        </div>
+        <div class="panel seasonal-highlight">
+          <h2>Seasonal Spotlight</h2>
+          <div id="seasonalEvents" class="seasonal-carousel"></div>
         </div>
       </section>
 
@@ -116,6 +122,23 @@
         <div class="panel">
           <h2>Sticker Albums</h2>
           <div id="albumsList" class="albums"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="events">
+        <div class="panel seasonal-panel">
+          <h2>Event Playbill</h2>
+          <p class="panel-subtitle">Track live tournaments, Joker fights, and album rushes.</p>
+          <div id="eventsBoard" class="events-board"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="leaderboard">
+        <div class="panel leaderboard-panel">
+          <h2>Weekly Apex Crew</h2>
+          <p class="panel-subtitle">Top captains ranked by SharkCoins earned this week.</p>
+          <ol id="leaderboardList" class="leaderboard-list"></ol>
+          <div id="leaderboardMe" class="leaderboard-me"></div>
         </div>
       </section>
 

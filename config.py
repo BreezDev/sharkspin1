@@ -32,6 +32,7 @@ class Config:
     DAILY_MILESTONES = [int(x) for x in os.getenv("DAILY_MILESTONES", "1,3,5,7,14,21").split(",")]  # claim days to showcase
 
     LEVEL_XP_CURVE = [0, 100, 250, 450, 700, 1000, 1400, 1850, 2350, 2900]
+    LEVEL_EXTRA_STEP = int(os.getenv("LEVEL_EXTRA_STEP", 500))
     LEVEL_REWARDS = {
         2: {"type": "coins", "amount": 400},
         3: {"type": "energy", "amount": 30},
