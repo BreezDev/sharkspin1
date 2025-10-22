@@ -1,0 +1,219 @@
+body.admin-body {
+  background: radial-gradient(circle at 20% 20%, #1e1b4b, #0f172a 65%);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: #f8fafc;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0 0 4rem;
+}
+
+.admin-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.admin-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.75), rgba(147, 51, 234, 0.6));
+  border-radius: 28px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.45);
+  margin-bottom: 2rem;
+}
+
+.admin-hero-copy h1 {
+  margin: 0;
+  font-size: 2.8rem;
+  font-weight: 800;
+}
+
+.admin-hero-copy p {
+  max-width: 420px;
+  margin-top: 0.75rem;
+  line-height: 1.5;
+}
+
+.admin-hero-art {
+  width: 220px;
+  height: auto;
+}
+
+.admin-secret {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 2rem;
+}
+
+.admin-secret input {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  color: #f8fafc;
+  font-size: 1rem;
+}
+
+.admin-secret label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.admin-status {
+  min-height: 1.5rem;
+  grid-column: 1 / -1;
+  font-size: 0.95rem;
+  color: #facc15;
+}
+
+.admin-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.admin-card {
+  background: rgba(15, 23, 42, 0.72);
+  border-radius: 24px;
+  padding: 2rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.45);
+}
+
+.admin-card header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.admin-card header p {
+  margin-top: 0.5rem;
+  color: rgba(226, 232, 240, 0.78);
+}
+
+.admin-form {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-form .form-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.admin-form input,
+.admin-form textarea,
+.admin-form select {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  padding: 0.75rem 0.9rem;
+  background: rgba(15, 23, 42, 0.65);
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.admin-form textarea {
+  resize: vertical;
+}
+
+.admin-form button.primary {
+  justify-self: start;
+}
+
+button.primary {
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  border: none;
+  color: #0f172a;
+  font-weight: 700;
+  padding: 0.75rem 1.6rem;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+button.primary:hover {
+  transform: translateY(-2px);
+}
+
+button.danger {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  border: none;
+  color: #0b1120;
+  font-weight: 700;
+  padding: 0.7rem 1.4rem;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.admin-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-list .pill {
+  background: rgba(59, 130, 246, 0.18);
+  border-radius: 18px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.admin-list .pill .meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.admin-list .pill button {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #f8fafc;
+  border-radius: 12px;
+  padding: 0.45rem 1rem;
+}
+
+.admin-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-history li {
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: rgba(30, 64, 175, 0.35);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+}
+
+.admin-history strong {
+  display: block;
+  font-weight: 700;
+}
+
+.admin-result {
+  min-height: 1.25rem;
+  font-size: 0.9rem;
+  color: #22d3ee;
+}
+
+@media (min-width: 900px) {
+  .admin-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #leaderboardCard,
+  #rewardLinksCard {
+    grid-column: span 2;
+  }
+}

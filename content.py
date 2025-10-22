@@ -126,7 +126,9 @@ GUIDE_SECTIONS = [
 
 TASKBAR_LINKS = [
     {"target": "main", "label": "Main Spin", "emoji": "🎰"},
-    {"target": "wheel", "label": "Wheel of Tides", "emoji": "🌀"},
+    {"target": "wheel", "label": "Wheel", "emoji": "🌀"},
+    {"target": "events", "label": "Events", "emoji": "🎟️"},
+    {"target": "leaderboard", "label": "Leaders", "emoji": "🏆"},
     {"target": "albums", "label": "Albums", "emoji": "📔"},
     {"target": "shop", "label": "Shop", "emoji": "⭐"},
     {"target": "help", "label": "Help", "emoji": "❓"},

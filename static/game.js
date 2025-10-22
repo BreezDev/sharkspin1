@@ -3,14 +3,18 @@ const tg = window.Telegram?.WebApp;
 const state = {
   token: null,
   multiplier: 1,
+  energyPerSpin: 1,
+  energy: 0,
   wheelRewards: [],
   wheelRotation: 0,
   daily: null,
   packages: [],
   taskbar: [],
+  leaderboard: [],
 };
 
 const SLOT_SYMBOLS = ['🪙', '⚡', '🌀', '💠', '🦈', '🎁'];
+const MULTIPLIER_POOL = [1, 2, 3, 5, 8, 10, 15];
 
 async function postJSON(url, data) {
   const res = await fetch(url, {
@@ -67,12 +71,56 @@ function renderLevelProgress(progress) {
   }
 }
 
+function selectMultiplier(value) {
+  state.multiplier = value;
+  document.querySelectorAll('.multiplier-buttons .chip').forEach((btn) => {
+    btn.classList.toggle('active', parseInt(btn.dataset.mult, 10) === value);
+  });
+}
+
+function renderMultiplierButtons(options = MULTIPLIER_POOL) {
+  const container = document.querySelector('.multiplier-buttons');
+  if (!container) return;
+  container.innerHTML = '';
+  options.forEach((value) => {
+    const button = document.createElement('button');
+    button.className = 'chip';
+    button.dataset.mult = value;
+    button.textContent = `x${value}`;
+    if (value === state.multiplier) button.classList.add('active');
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      selectMultiplier(value);
+    });
+    container.appendChild(button);
+  });
+  updateMultiplierButtons(state.energy);
+}
+
+function updateMultiplierButtons(currentEnergy = state.energy) {
+  const cost = state.energyPerSpin || 1;
+  document.querySelectorAll('.multiplier-buttons .chip').forEach((btn) => {
+    const mult = parseInt(btn.dataset.mult, 10);
+    const affordable = currentEnergy >= mult * cost;
+    btn.disabled = !affordable;
+    if (mult === state.multiplier && !affordable) {
+      selectMultiplier(1);
+    }
+  });
+}
+
 function updateStats(payload) {
   if (!payload) return;
   if (payload.coins !== undefined) document.getElementById('coins').textContent = payload.coins;
-  if (payload.energy !== undefined) document.getElementById('energy').textContent = payload.energy;
+  if (payload.energy !== undefined) {
+    document.getElementById('energy').textContent = payload.energy;
+    state.energy = payload.energy;
+    updateMultiplierButtons(payload.energy);
+  }
   if (payload.level !== undefined) document.getElementById('level').textContent = payload.level;
   if (payload.wheel_tokens !== undefined) document.getElementById('wheelTokens').textContent = payload.wheel_tokens;
+  if (payload.weekly_coins !== undefined) document.getElementById('weeklyCoins').textContent = payload.weekly_coins;
+  if (payload.energy_per_spin !== undefined) state.energyPerSpin = payload.energy_per_spin;
   if (payload.progress) renderLevelProgress(payload.progress);
   if (payload.daily) renderDaily(payload.daily);
 }
@@ -112,8 +160,18 @@ async function auth() {
     return;
   }
   state.token = resp.token;
+  state.energyPerSpin = resp.energy_per_spin || state.energyPerSpin;
+  renderMultiplierButtons();
   updateStats(resp);
-  await Promise.all([loadCatalog(), loadWheelRewards(), loadEvents(), loadAlbums(), loadDaily(true), loadShop(true)]);
+  await Promise.all([
+    loadCatalog(),
+    loadWheelRewards(),
+    loadEvents(),
+    loadAlbums(),
+    loadLeaderboard(),
+    loadDaily(true),
+    loadShop(true),
+  ]);
 }
 
 async function refreshState() {
@@ -199,21 +257,96 @@ function renderEvents(events = []) {
   container.innerHTML = '';
   if (!events.length) {
     container.innerHTML = '<p>No live events yet. Check back soon!</p>';
-    return;
   }
   events.forEach((event) => {
     const card = document.createElement('div');
     card.className = 'event-card';
-    const progressPct = Math.min(100, Math.round((event.progress / event.target_spins) * 100));
+    if (event.banner_url) {
+      card.style.backgroundImage = `url(${event.banner_url})`;
+      card.style.backgroundSize = 'cover';
+      card.style.backgroundPosition = 'center';
+      card.style.color = '#f8fafc';
+    }
+    const progressValue = Math.min(event.progress ?? 0, event.target_spins || 1);
+    const progressPct = Math.min(100, Math.round((progressValue / Math.max(event.target_spins || 1, 1)) * 100));
     card.innerHTML = `
-      <div class="status">${event.status.toUpperCase()}</div>
+      <div class="status">${event.event_type?.toUpperCase() || 'LIVE'} • ${event.status.toUpperCase()}</div>
       <h3>${event.name}</h3>
       <p>${event.description}</p>
-      <p>Reward: ${event.reward_amount} ${event.reward_type}</p>
-      <progress value="${event.progress}" max="${event.target_spins}"></progress>
-      <div>${progressPct}% complete</div>
+      <div class="reward">Reward: ${event.reward_amount} ${event.reward_type}</div>
+      <progress value="${progressValue}" max="${event.target_spins}"></progress>
+      <div class="progress-line">${progressPct}% • ${progressValue}/${event.target_spins} spins</div>
     `;
     container.appendChild(card);
+  });
+  renderSeasonalEvents(events);
+  renderEventsBoard(events);
+}
+
+function eventArt(type) {
+  const artMap = {
+    live: '/static/images/seasonal-energy.svg',
+    seasonal: '/static/images/seasonal-wheel.svg',
+    limited: '/static/images/seasonal-sticker.svg',
+  };
+  return artMap[type] || artMap.live;
+}
+
+function renderSeasonalEvents(events = []) {
+  const container = document.getElementById('seasonalEvents');
+  if (!container) return;
+  container.innerHTML = '';
+  const featured = events.slice(0, 3);
+  if (!featured.length) {
+    container.innerHTML = '<p>Spin to unlock seasonal showcases.</p>';
+    return;
+  }
+  featured.forEach((event) => {
+    const card = document.createElement('div');
+    card.className = 'seasonal-card';
+    card.innerHTML = `
+      <span class="tag">${event.event_type || 'live'}</span>
+      <h3>${event.name}</h3>
+      <p>${event.description}</p>
+      <button class="cta">Jump In →</button>
+    `;
+    const art = document.createElement('img');
+    art.src = event.banner_url || eventArt(event.event_type);
+    art.alt = event.name;
+    card.appendChild(art);
+    container.appendChild(card);
+  });
+}
+
+function renderEventsBoard(events = []) {
+  const board = document.getElementById('eventsBoard');
+  if (!board) return;
+  board.innerHTML = '';
+  if (!events.length) {
+    board.innerHTML = '<p>No scheduled events. Admins can launch tournaments from the dashboard.</p>';
+    return;
+  }
+  events.forEach((event) => {
+    const sheet = document.createElement('div');
+    sheet.className = 'event-sheet';
+    const startDate = new Date(event.start_at).toLocaleString();
+    const endDate = new Date(event.end_at).toLocaleString();
+    const progressValue = Math.min(event.progress ?? 0, event.target_spins || 1);
+    const progressPct = Math.min(100, Math.round((progressValue / Math.max(event.target_spins || 1, 1)) * 100));
+    sheet.innerHTML = `
+      <header>
+        <div>
+          <h3>${event.name}</h3>
+          <small>${startDate} → ${endDate}</small>
+        </div>
+        <span class="badge">${event.status.toUpperCase()}</span>
+      </header>
+      <p>${event.description}</p>
+      <div>Reward: ${event.reward_amount} ${event.reward_type}</div>
+      <progress value="${progressValue}" max="${event.target_spins}"></progress>
+      <div>${progressPct}% complete • ${progressValue}/${event.target_spins} spins</div>
+    `;
+    board.appendChild(sheet);
   });
 }
 
@@ -224,6 +357,48 @@ async function loadEvents(skipStats) {
     if (!skipStats) updateStats(res);
     renderEvents(res.events || []);
   }
+}
+
+async function loadLeaderboard() {
+  if (!state.token) return;
+  const res = await getJSON(`/api/leaderboard?token=${encodeURIComponent(state.token)}`);
+  if (res.ok) {
+    renderLeaderboard(res.leaders || [], res.me || null);
+  }
+}
+
+function renderLeaderboard(leaders = [], me = null) {
+  const list = document.getElementById('leaderboardList');
+  const meBox = document.getElementById('leaderboardMe');
+  if (list) {
+    list.innerHTML = '';
+    if (!leaders.length) {
+      const empty = document.createElement('li');
+      empty.textContent = 'No leaderboard entries yet. Spin to earn SharkCoins!';
+      list.appendChild(empty);
+    } else {
+      leaders.forEach((leader) => {
+        const item = document.createElement('li');
+        item.innerHTML = `
+          <div>
+            <strong>#${leader.position} ${leader.username}</strong>
+            <small>Level ${leader.level}</small>
+          </div>
+          <div>${leader.weekly_coins}🪙</div>
+        `;
+        list.appendChild(item);
+      });
+    }
+  }
+  if (meBox) {
+    if (!me) {
+      meBox.textContent = 'Earn SharkCoins this week to place on the leaderboard.';
+    } else {
+      const place = me.position ? `#${me.position}` : 'Unranked';
+      meBox.innerHTML = `<span>${place}</span><span>${me.weekly_coins}🪙 this week</span>`;
+    }
+  }
+  state.leaderboard = leaders;
 }
 
 function renderAlbums(albums = []) {
@@ -465,13 +640,6 @@ function bindEvents() {
   document.getElementById('spinBtn')?.addEventListener('click', spin);
   document.getElementById('wheelSpinBtn')?.addEventListener('click', spinWheel);
   document.getElementById('claimDailyBtn')?.addEventListener('click', claimDaily);
-  document.querySelectorAll('.chip').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.multiplier = parseInt(btn.dataset.mult, 10);
-      document.querySelectorAll('.chip').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-    });
-  });
   document.getElementById('albumsList')?.addEventListener('click', (ev) => {
     const target = ev.target.closest('button[data-album]');
     if (!target) return;

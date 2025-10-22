@@ -26,6 +26,7 @@ class User(Base):
     total_earned = Column(Integer, default=0)
     wheel_tokens = Column(Integer, default=0)
     last_wheel_spin_at = Column(DateTime)
+    weekly_coins = Column(Integer, default=0)
 
 class Spin(Base):
     __tablename__ = "spins"
@@ -56,6 +57,24 @@ class RewardLink(Base):
     created_by = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    title = Column(String, default="")
+    note = Column(String, default="")
+
+
+class SlotSymbol(Base):
+    __tablename__ = "slot_symbols"
+    id = Column(Integer, primary_key=True)
+    emoji = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(String, default="")
+    weight = Column(Float, default=1.0)
+    coins = Column(Integer, default=0)
+    energy = Column(Integer, default=0)
+    wheel_tokens = Column(Integer, default=0)
+    art_url = Column(String, default="")
+    color = Column(String, default="#1de5a0")
+    is_enabled = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
 
 
 class WheelReward(Base):
@@ -124,6 +143,8 @@ class LiveEvent(Base):
     target_spins = Column(Integer, default=50)
     reward_type = Column(String, default="spins")
     reward_amount = Column(Integer, default=1)
+    event_type = Column(String, default="live")
+    banner_url = Column(String, default="")
 
 
 class EventProgress(Base):
@@ -161,3 +182,27 @@ class DailyRewardState(Base):
     total_claims = Column(Integer, default=0)
 
     user = relationship("User")
+
+
+class ShopItem(Base):
+    __tablename__ = "shop_items"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, unique=True, nullable=False)
+    stars = Column(Integer, default=0)
+    energy = Column(Integer, default=0)
+    bonus_spins = Column(Integer, default=0)
+    description = Column(String, default="")
+    art_url = Column(String, default="")
+    is_active = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+
+
+class BroadcastMessage(Base):
+    __tablename__ = "broadcast_messages"
+    id = Column(Integer, primary_key=True)
+    title = Column(String, nullable=False)
+    body = Column(String, nullable=False)
+    reward_url = Column(String, default="")
+    created_by = Column(String, default="system")
+    created_at = Column(DateTime, default=datetime.utcnow)

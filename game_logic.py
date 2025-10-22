@@ -9,27 +9,206 @@ from models import (
     EventProgress,
     LiveEvent,
     Sticker,
-    StickerAlbum,
+    ShopItem,
+    SlotSymbol,
     User,
     UserSticker,
     WheelReward,
 )
 
 
-SYMBOL_DEFINITIONS: Sequence[Tuple[str, float, Dict[str, int]]] = (
-    ("🪙", 0.24, {"coins": 60}),
-    ("⚡", 0.2, {"energy": 4}),
-    ("🌀", 0.18, {"wheel_tokens": 1}),
-    ("💠", 0.16, {"coins": 110}),
-    ("🦈", 0.12, {"coins": 160, "energy": 6}),
-    ("🎁", 0.1, {"coins": 90, "wheel_tokens": 1}),
-)
+def xp_threshold(level_index: int) -> int:
+    curve = Config.LEVEL_XP_CURVE
+    if level_index <= 0:
+        return 0
+    if level_index < len(curve):
+        return curve[level_index]
+    extra_steps = level_index - (len(curve) - 1)
+    return curve[-1] + max(extra_steps, 0) * Config.LEVEL_EXTRA_STEP
 
-SYMBOLS: Sequence[str] = tuple(sym for sym, _, _ in SYMBOL_DEFINITIONS)
-SYMBOL_WEIGHTS: Sequence[float] = tuple(weight for _, weight, _ in SYMBOL_DEFINITIONS)
-SYMBOL_REWARD_BASE: Dict[str, Dict[str, int]] = {
-    sym: base for sym, _, base in SYMBOL_DEFINITIONS
-}
+
+def level_from_xp(total_xp: int) -> int:
+    xp = max(int(total_xp or 0), 0)
+    level = 1
+    while xp >= xp_threshold(level):
+        level += 1
+    return level
+
+
+def refresh_level(user: User) -> None:
+    user.level = level_from_xp(getattr(user, "total_earned", 0))
+
+def ensure_default_slot_symbols(session) -> List[SlotSymbol]:
+    symbols = (
+        session.query(SlotSymbol)
+        .filter(SlotSymbol.is_enabled.is_(True))
+        .order_by(SlotSymbol.sort_order.asc(), SlotSymbol.id.asc())
+        .all()
+    )
+    if symbols:
+        return symbols
+
+    defaults: Sequence[Tuple[str, str, str, float, Dict[str, int], str, str]] = (
+        (
+            "🪙",
+            "Treasure Cache",
+            "Reliable coin drop for steady XP",
+            1.8,
+            {"coins": 120, "energy": 2, "wheel_tokens": 0},
+            "#ffd447",
+            "/static/images/seasonal-sticker.svg",
+        ),
+        (
+            "⚡",
+            "Energy Surge",
+            "Power-up burst that fuels marathon spins",
+            1.5,
+            {"coins": 40, "energy": 6, "wheel_tokens": 0},
+            "#5cf1ff",
+            "/static/images/seasonal-energy.svg",
+        ),
+        (
+            "🌀",
+            "Token Typhoon",
+            "Wheel tokens for premium prize wheels",
+            1.1,
+            {"coins": 60, "energy": 1, "wheel_tokens": 1},
+            "#8b5cf6",
+            "/static/images/seasonal-wheel.svg",
+        ),
+        (
+            "💠",
+            "Prism Vault",
+            "High yield crystal cache with coins",
+            0.9,
+            {"coins": 220, "energy": 3, "wheel_tokens": 0},
+            "#f472b6",
+            "/static/images/seasonal-wheel.svg",
+        ),
+        (
+            "🦈",
+            "Shark Jackpot",
+            "Signature shark pull with all resources",
+            0.6,
+            {"coins": 360, "energy": 6, "wheel_tokens": 2},
+            "#22d3ee",
+            "/static/images/hero-boinkers.svg",
+        ),
+        (
+            "🎁",
+            "Mystery Cache",
+            "Balanced grab bag of goodies",
+            0.85,
+            {"coins": 140, "energy": 2, "wheel_tokens": 1},
+            "#facc15",
+            "/static/images/seasonal-sticker.svg",
+        ),
+        (
+            "🌊",
+            "Empty Net",
+            "Sometimes the tides are quiet – no loot",
+            1.25,
+            {"coins": 0, "energy": 0, "wheel_tokens": 0},
+            "#38bdf8",
+            "/static/images/header-bg.svg",
+        ),
+    )
+
+    created: List[SlotSymbol] = []
+    for idx, (emoji, name, description, weight, rewards, color, art_url) in enumerate(defaults):
+        created.append(
+            SlotSymbol(
+                emoji=emoji,
+                name=name,
+                description=description,
+                weight=weight,
+                coins=rewards.get("coins", 0),
+                energy=rewards.get("energy", 0),
+                wheel_tokens=rewards.get("wheel_tokens", 0),
+                color=color,
+                art_url=art_url,
+                sort_order=idx,
+                is_enabled=True,
+            )
+        )
+    session.add_all(created)
+    session.commit()
+    return (
+        session.query(SlotSymbol)
+        .filter(SlotSymbol.is_enabled.is_(True))
+        .order_by(SlotSymbol.sort_order.asc(), SlotSymbol.id.asc())
+        .all()
+    )
+
+
+def ensure_default_shop_items(session) -> List[ShopItem]:
+    items = (
+        session.query(ShopItem)
+        .filter(ShopItem.is_active.is_(True))
+        .order_by(ShopItem.sort_order.asc(), ShopItem.id.asc())
+        .all()
+    )
+    if items:
+        return items
+
+    defaults: Sequence[Tuple[str, str, int, int, int, str]] = (
+        (
+            "Coral Splash 100",
+            "energy_100",
+            50,
+            100,
+            1,
+            "Starter burst to keep the reels humming.",
+        ),
+        (
+            "Abyss Diver 250",
+            "energy_250",
+            120,
+            250,
+            3,
+            "Big energy dive plus bonus Wheel Tokens.",
+        ),
+        (
+            "Mega Reef 600",
+            "energy_600",
+            260,
+            600,
+            8,
+            "Legendary boost with neon wheel fireworks.",
+        ),
+        (
+            "Galactic Tide 1200",
+            "energy_1200",
+            520,
+            1200,
+            20,
+            "Whale-sized stash plus stacks of spins.",
+        ),
+    )
+
+    records: List[ShopItem] = []
+    for idx, (name, slug, stars, energy, bonus_spins, description) in enumerate(defaults):
+        records.append(
+            ShopItem(
+                name=name,
+                slug=slug,
+                stars=stars,
+                energy=energy,
+                bonus_spins=bonus_spins,
+                description=description,
+                art_url=f"/static/images/shop/{slug}.svg",
+                sort_order=idx,
+                is_active=True,
+            )
+        )
+    session.add_all(records)
+    session.commit()
+    return (
+        session.query(ShopItem)
+        .filter(ShopItem.is_active.is_(True))
+        .order_by(ShopItem.sort_order.asc(), ShopItem.id.asc())
+        .all()
+    )
 
 # --- Slot Machine Logic ----------------------------------------------------
 
@@ -41,15 +220,26 @@ def can_spin(user: User, multiplier: int) -> Tuple[bool, str]:
     return True, ""
 
 
-def apply_spin(user: User, multiplier: int = 1):
+def apply_spin(session, user: User, multiplier: int = 1):
     ok, msg = can_spin(user, multiplier)
     if not ok:
         return False, msg, 0, {"symbols": ("🪙", "🪙", "🪙"), "label": "No Spin", "rewards": {}}
 
+    symbols = ensure_default_slot_symbols(session)
+    if not symbols:
+        return False, "Slot machine is offline — no symbols configured", 0, {
+            "symbols": ("❌", "❌", "❌"),
+            "label": "No Config",
+            "rewards": {},
+        }
+
+    weights = [max(sym.weight, 0.01) for sym in symbols]
+    rolled: List[SlotSymbol] = [random.choices(symbols, weights)[0] for _ in range(3)]
+    reels = tuple(sym.emoji for sym in rolled)
+
     user.energy -= Config.ENERGY_PER_SPIN * multiplier
 
-    reels = [roll_symbol() for _ in range(3)]
-    rewards, label = calc_payout(reels, multiplier)
+    rewards, label = calc_payout(rolled, multiplier)
 
     coins_delta = rewards.get("coins", 0)
     energy_delta = rewards.get("energy", 0)
@@ -59,37 +249,36 @@ def apply_spin(user: User, multiplier: int = 1):
     user.energy += energy_delta
     user.wheel_tokens += wheel_delta
     user.total_earned += coins_delta
-    user.level = max(1, 1 + int((user.total_earned / 1200) ** 0.6))
+    user.weekly_coins = max(0, (user.weekly_coins or 0) + coins_delta)
+    refresh_level(user)
 
     return True, "", coins_delta, {"symbols": reels, "label": label, "rewards": rewards}
 
 
-def roll_symbol() -> str:
-    return random.choices(SYMBOLS, SYMBOL_WEIGHTS)[0]
-
-
-def calc_symbol_rewards(reels: Sequence[str]) -> Dict[str, int]:
+def calc_symbol_rewards(reels: Sequence[SlotSymbol]) -> Dict[str, int]:
     rewards = {"coins": 0, "energy": 0, "wheel_tokens": 0}
     for symbol in reels:
-        base = SYMBOL_REWARD_BASE.get(symbol, {})
-        for key, value in base.items():
-            rewards[key] = rewards.get(key, 0) + value
+        rewards["coins"] += max(symbol.coins, 0)
+        rewards["energy"] += max(symbol.energy, 0)
+        rewards["wheel_tokens"] += max(symbol.wheel_tokens, 0)
     return rewards
 
 
-def calc_payout(reels: Sequence[str], mult: int) -> Tuple[Dict[str, int], str]:
-    counts = Counter(reels)
+def calc_payout(reels: Sequence[SlotSymbol], mult: int) -> Tuple[Dict[str, int], str]:
+    counts = Counter(sym.emoji for sym in reels)
     base_rewards = calc_symbol_rewards(reels)
     reward_multiplier = mult
     label = "Cascade"
 
     if len(counts) == 1:
-        label = "Jackpot Triple"
+        label = f"Triple {reels[0].name}"
         reward_multiplier *= 3
     elif any(count == 2 for count in counts.values()):
-        label = "Twin Surge"
+        pair_symbol = next(sym for sym, count in counts.items() if count == 2)
+        pair_name = next(sym.name for sym in reels if sym.emoji == pair_symbol)
+        label = f"Twin {pair_name}"
         reward_multiplier *= 2
-    elif "🦈" in counts:
+    elif any(sym.emoji == "🦈" for sym in reels):
         label = "Shark Resonance"
         reward_multiplier = int(reward_multiplier * 1.5)
 
@@ -98,7 +287,10 @@ def calc_payout(reels: Sequence[str], mult: int) -> Tuple[Dict[str, int], str]:
         for key, value in base_rewards.items()
         if value
     }
-    # ensure keys exist even if zero for consistent client rendering
+
+    if sum(adjusted.values()) == 0:
+        label = "Empty Net"
+
     for key in ("coins", "energy", "wheel_tokens"):
         adjusted.setdefault(key, 0)
     return adjusted, label
@@ -139,6 +331,9 @@ def spin_wheel(user: User, rewards: Sequence[WheelReward]):
 def apply_reward(user: User, reward: WheelReward):
     if reward.reward_type == "coins":
         user.coins += reward.amount
+        user.total_earned += reward.amount
+        user.weekly_coins = max(0, (user.weekly_coins or 0) + reward.amount)
+        refresh_level(user)
     elif reward.reward_type == "spins":
         user.energy += reward.amount * Config.ENERGY_PER_SPIN
     elif reward.reward_type == "energy":
@@ -286,6 +481,9 @@ def record_event_spin(session, user: User, multiplier: int):
             user.energy += event.reward_amount * Config.ENERGY_PER_SPIN
         elif event.reward_type == "coins":
             user.coins += event.reward_amount
+            user.total_earned += event.reward_amount
+            user.weekly_coins = max(0, (user.weekly_coins or 0) + event.reward_amount)
+            refresh_level(user)
         else:
             user.wheel_tokens += event.reward_amount
         progress.claimed = True
@@ -308,6 +506,8 @@ def serialize_event(event: LiveEvent, progress: EventProgress | None):
         "target_spins": event.target_spins,
         "reward_type": event.reward_type,
         "reward_amount": event.reward_amount,
+        "event_type": event.event_type,
+        "banner_url": event.banner_url,
         "status": status,
         "progress": progress.progress if progress else 0,
         "claimed": progress.claimed if progress else False,

@@ -7,10 +7,12 @@
   --accent: #00f0ff;
   --accent-2: #ff7a9e;
   --accent-3: #ffed75;
+  --accent-4: #9eff9a;
   --text: #e7f9ff;
   --muted: #7ea1c6;
   --chip: rgba(0, 114, 255, 0.7);
   --taskbar: rgba(3, 22, 40, 0.92);
+  --card-glow: rgba(112, 165, 255, 0.35);
 }
 
 * {
@@ -46,7 +48,8 @@ a {
 }
 
 .masthead {
-  background: linear-gradient(140deg, rgba(0, 204, 255, 0.15), rgba(0, 40, 120, 0.4));
+  background: linear-gradient(140deg, rgba(0, 204, 255, 0.25), rgba(76, 29, 149, 0.45)),
+    url('/static/images/header-bg.svg') center/cover no-repeat;
   border-radius: 28px;
   padding: 24px;
   box-shadow: 0 24px 65px rgba(6, 42, 80, 0.45);
@@ -105,6 +108,19 @@ a {
   font-size: 1.8rem;
   font-weight: 600;
   color: var(--accent);
+}
+
+.stat-card .caption {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.stat-card.highlight {
+  background: linear-gradient(135deg, rgba(255, 196, 72, 0.18), rgba(75, 0, 130, 0.4));
+  border: 1px solid rgba(255, 196, 72, 0.45);
+  box-shadow: 0 16px 36px rgba(255, 196, 72, 0.25);
 }
 
 .progress-wrap {
@@ -305,7 +321,7 @@ progress::-moz-progress-bar {
 }
 
 .chip {
-  padding: 10px 22px;
+  padding: 12px 24px;
   border-radius: 999px;
   border: 1px solid rgba(0, 255, 255, 0.25);
   background: var(--chip);
@@ -322,6 +338,13 @@ progress::-moz-progress-bar {
   color: #021527;
   box-shadow: 0 12px 24px rgba(0, 180, 255, 0.35);
   transform: translateY(-2px);
+}
+
+.chip[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .slot-actions {
@@ -408,11 +431,24 @@ progress::-moz-progress-bar {
   gap: 16px;
 }
 
+
 .event-card {
-  background: rgba(3, 24, 42, 0.8);
-  border-radius: 18px;
-  padding: 16px;
-  border: 1px solid rgba(0, 240, 255, 0.18);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(99, 102, 241, 0.32));
+  border-radius: 22px;
+  padding: 20px;
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 12px;
+}
+
+.event-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 55%);
+  pointer-events: none;
 }
 
 .event-card .status {
@@ -420,7 +456,12 @@ progress::-moz-progress-bar {
   text-transform: uppercase;
   letter-spacing: 1.6px;
   color: var(--accent-2);
-  margin-bottom: 6px;
+}
+
+.event-card .reward,
+.event-card .progress-line {
+  font-size: 0.85rem;
+  color: rgba(240, 244, 255, 0.85);
 }
 
 .event-card progress {
@@ -428,7 +469,141 @@ progress::-moz-progress-bar {
   height: 12px;
   border-radius: 999px;
   overflow: hidden;
-  margin-top: 12px;
+}
+
+.seasonal-highlight {
+  background: linear-gradient(140deg, rgba(14, 165, 233, 0.2), rgba(103, 232, 249, 0.08));
+  border: 1px solid rgba(14, 165, 233, 0.35);
+}
+
+.seasonal-carousel {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.seasonal-card {
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 20px;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.seasonal-card::before {
+  content: '';
+  position: absolute;
+  inset: -20% 40% auto -20%;
+  height: 160px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.45), transparent 70%);
+  opacity: 0.7;
+}
+
+.seasonal-card .tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent-2);
+}
+
+.seasonal-card .cta {
+  justify-self: start;
+  padding: 8px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.3), rgba(147, 51, 234, 0.3));
+  border: 1px solid rgba(244, 114, 182, 0.4);
+  font-size: 0.85rem;
+}
+
+.seasonal-card img {
+  width: 64px;
+  height: 64px;
+  justify-self: end;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.4));
+}
+
+.seasonal-panel {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.24), rgba(14, 165, 233, 0.2));
+  border: 1px solid rgba(129, 140, 248, 0.45);
+}
+
+.events-board {
+  display: grid;
+  gap: 18px;
+}
+
+.events-board .event-sheet {
+  background: rgba(15, 23, 42, 0.78);
+  border-radius: 20px;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  padding: 18px 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.event-sheet header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.event-sheet .badge {
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: rgba(236, 72, 153, 0.2);
+  border: 1px solid rgba(236, 72, 153, 0.45);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.event-sheet progress {
+  width: 100%;
+  height: 12px;
+}
+
+.leaderboard-panel {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(76, 29, 149, 0.25));
+  border: 1px solid rgba(14, 165, 233, 0.4);
+}
+
+.leaderboard-list {
+  list-style: none;
+  margin: 24px 0 18px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.leaderboard-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  box-shadow: 0 14px 24px rgba(2, 6, 23, 0.35);
+}
+
+.leaderboard-list strong {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.leaderboard-me {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.32);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
 }
 
 .wheel-stage {
