@@ -1,0 +1,30 @@
+<svg width="420" height="240" viewBox="0 0 420 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ab-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00152f" />
+      <stop offset="55%" stop-color="#001d5c" />
+      <stop offset="100%" stop-color="#490063" />
+    </linearGradient>
+    <radialGradient id="ab-glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#00ffc6" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#00ffc6" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="420" height="240" rx="28" fill="url(#ab-bg)" />
+  <rect width="420" height="240" rx="28" fill="url(#ab-glow)" />
+  <g fill="none" stroke="#00ffc6" stroke-opacity="0.6" stroke-width="3">
+    <path d="M40 170 Q120 120 200 170 T360 170" />
+    <path d="M60 190 Q140 140 220 190 T380 190" />
+  </g>
+  <g fill="#00ffc6" opacity="0.8">
+    <circle cx="90" cy="96" r="8" />
+    <circle cx="130" cy="76" r="6" />
+    <circle cx="168" cy="104" r="7" />
+    <circle cx="220" cy="84" r="5" />
+    <circle cx="266" cy="70" r="9" />
+    <circle cx="312" cy="88" r="7" />
+  </g>
+  <path d="M60 144 L102 120 L140 132 L162 110 L210 130 L250 112 L292 124 L330 100 L360 118 L360 156 L60 156 Z" fill="rgba(0, 255, 198, 0.22)" />
+  <text x="36" y="200" font-family="'Orbitron', 'Arial', sans-serif" font-size="28" fill="#a9fef7" letter-spacing="1.5">ABYSSAL BOUNTY</text>
+  <text x="36" y="220" font-family="'Inter', 'Arial', sans-serif" font-size="14" fill="rgba(210,255,247,0.75)">Collect coins during midnight runs</text>
+</svg>

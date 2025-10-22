@@ -2,6 +2,19 @@
 
 Welcome aboard, captain. This document maps every switch you can flip inside the refreshed SharkSpin experience—from slot machine tuning to asset placement.
 
+## 0. Quick Admin Control Map
+
+| Feature | Where to edit | Notes |
+| --- | --- | --- |
+| Slot symbols, payouts, "no reward" odds | `/admin/slot-symbols` in **adminpanel.py** | Adjust emoji, descriptions, reward payloads, and `weight` to influence hit rates. Toggle `is_enabled` to temporarily remove a symbol. |
+| Coin cost, energy cost, multiplier presets | `config.py` (`COIN_COST_PER_SPIN`, `ENERGY_PER_SPIN`, `SPIN_MULTIPLIER_PRESETS`) | The web app reads these values and exposes them in the wager HUD. |
+| Albums & sticker packs | `/admin/albums` + `/admin/stickers` APIs | Seed defaults via `ensure_default_albums` or curate directly from the admin panel. |
+| Live + seasonal events & rewards | `/admin/events` | Create, edit, or retire entries. The helper `ensure_signature_events` (game_logic.py) seeds the three showcase events and banner art. |
+| Wheel of Tides rewards | `/admin/wheel` | Edit label, color, reward type/amount, or probability weight per slice. |
+| Shop bundles | `/admin/shop` | Manage energy bundles, bonus spin counts, and art references. |
+| Reward links & broadcast messages | `/admin/rewards`, `/admin/broadcasts` | Generate redeemable links, inspect redemptions, or send Telegram broadcasts with reward URLs. |
+| Leaderboard weekly payouts | `/admin/leaderboard` | Issue SharkCoin/energy rewards to the top captains from the dashboard. |
+
 ## 1. Platform Configuration
 
 | Setting | Purpose | Default | Where to edit |
@@ -21,8 +34,11 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 
 ## 2. Slot Machine & Economy
 
-* Slot symbols, reward mixes, and multipliers are defined in `game_logic.py` via `SYMBOL_DEFINITIONS`.
-* Spin energy cost = `Config.ENERGY_PER_SPIN`. Multipliers in the UI simply multiply that cost and the reward payload.
+* Spin wagers now consume **energy and SharkCoins**. Configure the base drain through:
+  * `Config.ENERGY_PER_SPIN` – energy drained per multiplier tier.
+  * `Config.COIN_COST_PER_SPIN` – coins removed per multiplier tier.
+  * `Config.SPIN_MULTIPLIER_PRESETS` – the selectable multipliers (the UI renders up to 100k wagers).
+* Slot symbols, reward mixes, and "no loot" odds are editable through the admin panel (`/admin/slot-symbols`) or directly inside `game_logic.ensure_default_slot_symbols()`.
 * Level progress uses `user.total_earned` against the thresholds returned by `_xp_threshold` (see `app.py`). Update `Config.LEVEL_XP_CURVE` and `LEVEL_REWARDS` to re-balance XP pacing or bonus drops.
 
 ## 3. Daily Rewards
@@ -52,9 +68,10 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 
 ## 6. Live Events
 
-* Events reside in the `live_events` table (`models.LiveEvent`).
-* The helper `ensure_demo_event()` seeds a sample regatta; adjust this or insert new rows with start/end timestamps, spin targets, and reward payloads.
-* Player progress is tracked in `event_progress`. Spins automatically advance the active event via `record_event_spin()` in `game_logic.py`.
+* Events reside in the `live_events` table (`models.LiveEvent`). Maintain them in bulk from `/admin/events`.
+* The helper `ensure_signature_events()` (game_logic.py) seeds three showcase campaigns (Grand Regatta, Abyssal Bounty Hunt, Turbine Frenzy). Update the definitions there to change banners, timing, or default rewards.
+* Event art lives under `static/images/events/`. Swap in new SVGs and adjust each event's `banner_url`.
+* Player progress is tracked in `event_progress`. Every spin updates all live events via `record_event_spin()` and automatically awards their configured rewards when goals are met.
 
 ## 7. Star Shop (In-App Purchases)
 
@@ -66,12 +83,13 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 
 ## 8. Web App Content & Navigation
 
-* `templates/index.html` – markup for the new command deck (hero, slot machine, wheel, shop, help, etc.).
-* `static/styles.css` – casino styling, slot machine chrome, wheel lighting, and responsive layouts.
-* `static/game.js` – client logic for authentication, slot spins, wheel spins, daily rewards, shop invoicing, navigation, and guide rendering.
-* `content.py` – editable narrative data for the “Operations Briefing” callouts, guide sections, and taskbar structure. Update this file to change copy or add new help sections without touching JS.
+* `templates/index.html` – markup for the neon slot landing page, leaderboard lounge, wheel, albums, and shop views.
+* `static/styles.css` – casino styling, slot machine chrome, wheel lighting, marquee ticker, and responsive layouts.
+* `static/game.js` – client logic for authentication, slot spins, wheel spins, daily rewards, shop invoicing, navigation, and guide rendering. The wager HUD pulls values from the API (coin cost, energy cost, multipliers).
+* `content.py` – editable narrative data for the “Operations Briefing” callouts and the taskbar structure. The new taskbar order lives in `TASKBAR_LINKS`; set the `default` flag on whichever view should load first.
 * Additional assets:
   * `static/images/slot-*.svg` for the slot machine bezel and lights.
+  * `static/images/events/*.svg` for event spotlights.
   * `static/images/daily-chest.svg` for the daily reward hero.
   * `static/images/info-*.svg` for informational callouts.
 

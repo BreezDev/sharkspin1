@@ -24,7 +24,15 @@ class Config:
     STARTING_COINS = int(os.getenv("STARTING_COINS", 100))
     STARTING_ENERGY = int(os.getenv("STARTING_ENERGY", 30))
     ENERGY_PER_SPIN = int(os.getenv("ENERGY_PER_SPIN", 1))
+    COIN_COST_PER_SPIN = int(os.getenv("COIN_COST_PER_SPIN", 25))
     SPIN_COOLDOWN_MS = int(os.getenv("SPIN_COOLDOWN_MS", 900))
+    SPIN_MULTIPLIER_PRESETS = [
+        int(x)
+        for x in os.getenv(
+            "SPIN_MULTIPLIER_PRESETS",
+            "1,5,10,25,50,100,150,250,500,700,1000,2000,5000,10000,20000,50000,100000",
+        ).split(",")
+    ]
 
     DAILY_REWARD_BASE_COINS = int(os.getenv("DAILY_REWARD_BASE_COINS", 200))
     DAILY_REWARD_BASE_ENERGY = int(os.getenv("DAILY_REWARD_BASE_ENERGY", 6))
@@ -32,6 +40,7 @@ class Config:
     DAILY_MILESTONES = [int(x) for x in os.getenv("DAILY_MILESTONES", "1,3,5,7,14,21").split(",")]  # claim days to showcase
 
     LEVEL_XP_CURVE = [0, 100, 250, 450, 700, 1000, 1400, 1850, 2350, 2900]
+    LEVEL_EXTRA_STEP = int(os.getenv("LEVEL_EXTRA_STEP", 500))
     LEVEL_REWARDS = {
         2: {"type": "coins", "amount": 400},
         3: {"type": "energy", "amount": 30},
