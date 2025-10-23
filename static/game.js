@@ -5,16 +5,37 @@ const state = {
   multiplier: 1,
   energyPerSpin: 1,
   energy: 0,
+  coins: 0,
+  coinCostPerSpin: 0,
   wheelRewards: [],
   wheelRotation: 0,
   daily: null,
   packages: [],
   taskbar: [],
   leaderboard: [],
+  spinMultipliers: [],
 };
 
 const SLOT_SYMBOLS = ['🪙', '⚡', '🌀', '💠', '🦈', '🎁'];
-const MULTIPLIER_POOL = [1, 2, 3, 5, 8, 10, 15];
+const DEFAULT_MULTIPLIERS = [
+  1,
+  5,
+  10,
+  25,
+  50,
+  100,
+  150,
+  250,
+  500,
+  700,
+  1000,
+  2000,
+  5000,
+  10000,
+  20000,
+  50000,
+  100000,
+];
 
 async function postJSON(url, data) {
   const res = await fetch(url, {
@@ -42,18 +63,19 @@ function switchView(view) {
 function setupTaskbar(links = []) {
   const bar = document.getElementById('taskbar');
   bar.innerHTML = '';
-  links.forEach((link, idx) => {
+  const defaultLink = links.find((link) => link.default) || links[0];
+  links.forEach((link) => {
     const button = document.createElement('button');
     button.dataset.view = link.target;
     button.innerHTML = `${link.emoji || ''} ${link.label}`;
     button.addEventListener('click', () => switchView(link.target));
-    if (idx === 0) {
+    if (defaultLink && link.target === defaultLink.target) {
       button.classList.add('active');
     }
     bar.appendChild(button);
   });
-  if (links.length) {
-    switchView(links[0].target);
+  if (defaultLink) {
+    switchView(defaultLink.target);
   }
 }
 
@@ -76,13 +98,15 @@ function selectMultiplier(value) {
   document.querySelectorAll('.multiplier-buttons .chip').forEach((btn) => {
     btn.classList.toggle('active', parseInt(btn.dataset.mult, 10) === value);
   });
+  updateWagerDisplay();
 }
 
-function renderMultiplierButtons(options = MULTIPLIER_POOL) {
+function renderMultiplierButtons(options = state.spinMultipliers) {
   const container = document.querySelector('.multiplier-buttons');
   if (!container) return;
   container.innerHTML = '';
-  options.forEach((value) => {
+  const values = options && options.length ? options : DEFAULT_MULTIPLIERS;
+  values.forEach((value) => {
     const button = document.createElement('button');
     button.className = 'chip';
     button.dataset.mult = value;
@@ -94,33 +118,66 @@ function renderMultiplierButtons(options = MULTIPLIER_POOL) {
     });
     container.appendChild(button);
   });
-  updateMultiplierButtons(state.energy);
+  updateMultiplierButtons(state.energy, state.coins);
 }
 
-function updateMultiplierButtons(currentEnergy = state.energy) {
-  const cost = state.energyPerSpin || 1;
+function updateMultiplierButtons(currentEnergy = state.energy, currentCoins = state.coins) {
+  const energyCost = state.energyPerSpin || 1;
+  const coinCost = state.coinCostPerSpin || 0;
   document.querySelectorAll('.multiplier-buttons .chip').forEach((btn) => {
     const mult = parseInt(btn.dataset.mult, 10);
-    const affordable = currentEnergy >= mult * cost;
+    const affordable =
+      currentEnergy >= mult * energyCost && (coinCost === 0 || currentCoins >= mult * coinCost);
     btn.disabled = !affordable;
     if (mult === state.multiplier && !affordable) {
       selectMultiplier(1);
     }
   });
+  updateWagerDisplay();
+}
+
+function updateWagerDisplay() {
+  const energyEl = document.getElementById('wagerEnergy');
+  const coinEl = document.getElementById('wagerCoins');
+  const energyCost = (state.energyPerSpin || 1) * state.multiplier;
+  const coinCost = (state.coinCostPerSpin || 0) * state.multiplier;
+  if (energyEl) {
+    energyEl.textContent = `${energyCost.toLocaleString()}⚡`;
+  }
+  if (coinEl) {
+    coinEl.textContent = `${coinCost.toLocaleString()}🪙`;
+  }
+  const spinBtn = document.getElementById('spinBtn');
+  if (spinBtn) {
+    const hasEnergy = state.energy >= energyCost;
+    const hasCoins = coinCost === 0 || state.coins >= coinCost;
+    spinBtn.disabled = !(hasEnergy && hasCoins);
+  }
 }
 
 function updateStats(payload) {
   if (!payload) return;
-  if (payload.coins !== undefined) document.getElementById('coins').textContent = payload.coins;
+  if (payload.coins !== undefined) {
+    document.getElementById('coins').textContent = payload.coins;
+    state.coins = payload.coins;
+    updateMultiplierButtons(state.energy, payload.coins);
+  }
   if (payload.energy !== undefined) {
     document.getElementById('energy').textContent = payload.energy;
     state.energy = payload.energy;
-    updateMultiplierButtons(payload.energy);
+    updateMultiplierButtons(payload.energy, state.coins);
   }
   if (payload.level !== undefined) document.getElementById('level').textContent = payload.level;
   if (payload.wheel_tokens !== undefined) document.getElementById('wheelTokens').textContent = payload.wheel_tokens;
   if (payload.weekly_coins !== undefined) document.getElementById('weeklyCoins').textContent = payload.weekly_coins;
   if (payload.energy_per_spin !== undefined) state.energyPerSpin = payload.energy_per_spin;
+  if (payload.coin_cost_per_spin !== undefined) state.coinCostPerSpin = payload.coin_cost_per_spin;
+  if (Array.isArray(payload.spin_multipliers) && payload.spin_multipliers.length) {
+    state.spinMultipliers = payload.spin_multipliers.map((value) => parseInt(value, 10)).filter(Boolean);
+    renderMultiplierButtons();
+  } else {
+    updateWagerDisplay();
+  }
   if (payload.progress) renderLevelProgress(payload.progress);
   if (payload.daily) renderDaily(payload.daily);
 }
@@ -161,6 +218,10 @@ async function auth() {
   }
   state.token = resp.token;
   state.energyPerSpin = resp.energy_per_spin || state.energyPerSpin;
+  state.coinCostPerSpin = resp.coin_cost_per_spin ?? state.coinCostPerSpin;
+  if (Array.isArray(resp.spin_multipliers) && resp.spin_multipliers.length) {
+    state.spinMultipliers = resp.spin_multipliers.map((value) => parseInt(value, 10)).filter(Boolean);
+  }
   renderMultiplierButtons();
   updateStats(resp);
   await Promise.all([
@@ -197,7 +258,15 @@ async function spin() {
   if (res.result?.symbols) animateReels(res.result.symbols);
   const rewardText = formatRewards(res.result?.rewards);
   const label = res.result?.label ? ` (${res.result.label})` : '';
-  document.getElementById('result').textContent = `${rewardText}${label}`;
+  const hasCoinCost = typeof res.result?.coin_cost === 'number';
+  const wagerCoin = hasCoinCost ? `Wager ${res.result.coin_cost.toLocaleString()}🪙` : '';
+  const hasEnergySpend = typeof res.result?.energy_spent === 'number';
+  const energySpent = hasEnergySpend ? `Spent ${res.result.energy_spent.toLocaleString()}⚡` : '';
+  const net = typeof res.result?.net_coins === 'number'
+    ? `Net ${res.result.net_coins >= 0 ? '+' : ''}${res.result.net_coins.toLocaleString()}🪙`
+    : '';
+  const messageBits = [wagerCoin, energySpent, rewardText, net].filter(Boolean);
+  document.getElementById('result').textContent = `${messageBits.join(' • ')}${label}`;
   setTimeout(refreshState, 1500);
   await loadEvents(true);
 }
@@ -640,6 +709,7 @@ function bindEvents() {
   document.getElementById('spinBtn')?.addEventListener('click', spin);
   document.getElementById('wheelSpinBtn')?.addEventListener('click', spinWheel);
   document.getElementById('claimDailyBtn')?.addEventListener('click', claimDaily);
+  document.getElementById('openHelpBtn')?.addEventListener('click', () => switchView('help'));
   document.getElementById('albumsList')?.addEventListener('click', (ev) => {
     const target = ev.target.closest('button[data-album]');
     if (!target) return;

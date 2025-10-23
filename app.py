@@ -33,7 +33,7 @@ from game_logic import (
     ensure_default_shop_items,
     ensure_default_slot_symbols,
     ensure_default_wheel_rewards,
-    ensure_demo_event,
+    ensure_signature_events,
     grant_sticker,
     pull_sticker,
     refresh_level,
@@ -183,7 +183,7 @@ def bootstrap_catalogs():
     with Session() as s:
         ensure_default_wheel_rewards(s)
         ensure_default_albums(s)
-        ensure_demo_event(s)
+        ensure_signature_events(s)
         ensure_default_slot_symbols(s)
         ensure_default_shop_items(s)
 
@@ -331,6 +331,8 @@ def serialize_user_state(user: User) -> Dict[str, Any]:
         "total_earned": getattr(user, "total_earned", 0),
         "weekly_coins": getattr(user, "weekly_coins", 0),
         "energy_per_spin": Config.ENERGY_PER_SPIN,
+        "coin_cost_per_spin": Config.COIN_COST_PER_SPIN,
+        "spin_multipliers": Config.SPIN_MULTIPLIER_PRESETS,
         "progress": progress,
         "last_wheel_spin_at": user.last_wheel_spin_at.isoformat()
         if user.last_wheel_spin_at
@@ -708,7 +710,7 @@ def api_events():
 
     with Session() as s:
         user = s.merge(user)
-        ensure_demo_event(s)
+        ensure_signature_events(s)
         events = s.query(LiveEvent).order_by(LiveEvent.start_at).all()
         progress_map = {
             ep.event_id: ep

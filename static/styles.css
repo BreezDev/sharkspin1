@@ -47,36 +47,80 @@ a {
   gap: 24px;
 }
 
-.masthead {
-  background: linear-gradient(140deg, rgba(0, 204, 255, 0.25), rgba(76, 29, 149, 0.45)),
+.slot-header {
+  background: linear-gradient(160deg, rgba(0, 204, 255, 0.22), rgba(98, 17, 179, 0.38)),
     url('/static/images/header-bg.svg') center/cover no-repeat;
-  border-radius: 28px;
-  padding: 24px;
-  box-shadow: 0 24px 65px rgba(6, 42, 80, 0.45);
-  position: relative;
-}
-
-.hero {
+  border-radius: 32px;
+  padding: 28px 30px 32px;
+  box-shadow: 0 36px 80px rgba(4, 32, 62, 0.55);
   display: flex;
-  gap: 18px;
+  flex-direction: column;
+  gap: 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.slot-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 12% 20%, rgba(0, 255, 255, 0.25), transparent 55%),
+    radial-gradient(circle at 88% 18%, rgba(255, 122, 158, 0.18), transparent 60%);
+  pointer-events: none;
+}
+
+.brand-lockup {
+  display: flex;
   align-items: center;
+  gap: 18px;
+  position: relative;
+  z-index: 1;
 }
 
-.hero-art {
-  width: 108px;
+.brand-crest {
+  width: 112px;
   height: auto;
+  filter: drop-shadow(0 16px 35px rgba(0, 255, 255, 0.45));
 }
 
-.hero-copy h1 {
-  font-size: 2.1rem;
-  text-shadow: 0 0 22px rgba(0, 255, 255, 0.55);
+.brand-copy h1 {
+  font-size: 2.35rem;
+  text-shadow: 0 0 28px rgba(0, 255, 255, 0.65);
 }
 
-.hero-copy p {
+.brand-copy p {
   margin: 8px 0 0;
-  color: var(--muted);
+  color: rgba(224, 244, 255, 0.92);
   font-size: 0.95rem;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+
+.jackpot-ticker {
+  background: rgba(3, 18, 42, 0.75);
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  letter-spacing: 0.7px;
+  color: rgba(227, 245, 255, 0.9);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.jackpot-ticker span {
+  display: inline-block;
+  animation: ticker-glow 8s linear infinite;
+}
+
+@keyframes ticker-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+  }
+  50% {
+    text-shadow: 0 0 28px rgba(255, 237, 117, 0.65);
+  }
 }
 
 .stats-row {
@@ -86,15 +130,80 @@ a {
   margin-top: 22px;
 }
 
+.slot-marquee {
+  margin: 12px 0 -6px;
+  background: rgba(2, 20, 38, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  border-radius: 16px;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  color: rgba(186, 231, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.slot-marquee::before {
+  content: '🦈';
+  display: inline-block;
+  margin-right: 8px;
+  animation: marquee-spin 4s linear infinite;
+}
+
+@keyframes marquee-spin {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(360deg);
+  }
+}
+
+.slot-flares {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 4px;
+}
+
+.slot-flares img {
+  width: 64px;
+  height: 64px;
+  opacity: 0.8;
+  filter: drop-shadow(0 8px 24px rgba(0, 180, 255, 0.45));
+  animation: floaty 6s ease-in-out infinite;
+}
+
+.slot-flares img:nth-child(2) {
+  animation-delay: 1.6s;
+}
+
+.slot-flares img:nth-child(3) {
+  animation-delay: 3.2s;
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 .stat-card {
-  background: rgba(2, 16, 32, 0.85);
+  background: rgba(2, 16, 32, 0.82);
   border-radius: 18px;
   padding: 16px;
   border: 1px solid rgba(0, 240, 255, 0.18);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 140px;
+  min-height: 130px;
 }
 
 .stat-card .label {
@@ -221,9 +330,53 @@ progress::-moz-progress-bar {
   font-size: 0.9rem;
 }
 
+.panel-header.inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.panel-header.inline h2 {
+  margin: 0;
+}
+
 .slot-panel {
   position: relative;
   overflow: hidden;
+}
+
+.wager-info {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 18px 0 6px;
+  flex-wrap: wrap;
+}
+
+.wager-card {
+  background: rgba(0, 34, 65, 0.65);
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  border-radius: 18px;
+  padding: 14px 20px;
+  min-width: 160px;
+  text-align: center;
+  box-shadow: 0 18px 36px rgba(0, 180, 255, 0.25);
+}
+
+.wager-card .label {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 0.7rem;
+  color: rgba(156, 207, 255, 0.8);
+  margin-bottom: 6px;
+}
+
+.wager-card .value {
+  font-size: 1.4rem;
+  font-family: 'Orbitron', sans-serif;
+  color: var(--accent);
 }
 
 .slot-stage {
@@ -264,6 +417,7 @@ progress::-moz-progress-bar {
   background: url('/static/images/slot-lights.svg') no-repeat center/contain;
   opacity: 0.9;
   filter: drop-shadow(0 0 18px rgba(0, 255, 255, 0.45));
+  animation: slot-glow 5s ease-in-out infinite;
 }
 
 .slot-base {
@@ -271,6 +425,18 @@ progress::-moz-progress-bar {
   width: 300px;
   height: 110px;
   background: url('/static/images/slot-base.svg') no-repeat center/contain;
+}
+
+@keyframes slot-glow {
+  0%,
+  100% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 18px rgba(0, 255, 255, 0.35));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 32px rgba(0, 255, 255, 0.7));
+  }
 }
 
 .reel-container {
@@ -366,10 +532,34 @@ progress::-moz-progress-bar {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.ghost {
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.ghost:hover {
+  background: rgba(0, 240, 255, 0.18);
+  box-shadow: 0 12px 26px rgba(0, 240, 255, 0.22);
+  transform: translateY(-2px);
+}
+
 .primary {
   background: linear-gradient(120deg, #00f0ff, #0088ff);
   color: #03121e;
   box-shadow: 0 18px 40px rgba(0, 170, 255, 0.35);
+}
+
+.primary[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .primary.large {
@@ -879,12 +1069,12 @@ progress::-moz-progress-bar {
     padding: 18px 14px 96px;
   }
 
-  .hero {
+  .brand-lockup {
     flex-direction: column;
     text-align: center;
   }
 
-  .hero-art {
+  .brand-crest {
     width: 88px;
   }
 

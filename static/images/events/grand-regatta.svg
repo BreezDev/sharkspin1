@@ -1,0 +1,24 @@
+<svg width="420" height="240" viewBox="0 0 420 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gr-sea" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e0ff" />
+      <stop offset="60%" stop-color="#0054ff" />
+      <stop offset="100%" stop-color="#290d88" />
+    </linearGradient>
+    <linearGradient id="gr-sun" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe58f" />
+      <stop offset="100%" stop-color="#ff7ab5" />
+    </linearGradient>
+  </defs>
+  <rect width="420" height="240" rx="28" fill="url(#gr-sea)" />
+  <circle cx="320" cy="72" r="54" fill="url(#gr-sun)" opacity="0.85" />
+  <path d="M0 150 C90 120 150 180 220 150 C280 120 350 180 420 150 V240 H0 Z" fill="rgba(0, 14, 58, 0.6)" />
+  <path d="M0 164 C90 134 150 194 220 164 C280 134 350 194 420 164 V240 H0 Z" fill="rgba(0, 220, 255, 0.22)" />
+  <g fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round">
+    <path d="M64 102 Q102 82 138 102" />
+    <path d="M116 122 Q154 102 190 122" />
+    <path d="M168 78 Q206 58 242 78" />
+  </g>
+  <text x="36" y="198" font-family="'Orbitron', 'Arial', sans-serif" font-size="28" fill="white" letter-spacing="2">GRAND REGATTA</text>
+  <text x="36" y="218" font-family="'Inter', 'Arial', sans-serif" font-size="14" fill="rgba(233,250,255,0.8)">Push your crew around the neon track</text>
+</svg>

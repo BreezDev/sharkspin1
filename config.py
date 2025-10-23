@@ -24,7 +24,15 @@ class Config:
     STARTING_COINS = int(os.getenv("STARTING_COINS", 100))
     STARTING_ENERGY = int(os.getenv("STARTING_ENERGY", 30))
     ENERGY_PER_SPIN = int(os.getenv("ENERGY_PER_SPIN", 1))
+    COIN_COST_PER_SPIN = int(os.getenv("COIN_COST_PER_SPIN", 25))
     SPIN_COOLDOWN_MS = int(os.getenv("SPIN_COOLDOWN_MS", 900))
+    SPIN_MULTIPLIER_PRESETS = [
+        int(x)
+        for x in os.getenv(
+            "SPIN_MULTIPLIER_PRESETS",
+            "1,5,10,25,50,100,150,250,500,700,1000,2000,5000,10000,20000,50000,100000",
+        ).split(",")
+    ]
 
     DAILY_REWARD_BASE_COINS = int(os.getenv("DAILY_REWARD_BASE_COINS", 200))
     DAILY_REWARD_BASE_ENERGY = int(os.getenv("DAILY_REWARD_BASE_ENERGY", 6))

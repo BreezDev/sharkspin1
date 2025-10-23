@@ -215,8 +215,12 @@ def ensure_default_shop_items(session) -> List[ShopItem]:
 def can_spin(user: User, multiplier: int) -> Tuple[bool, str]:
     if multiplier < 1:
         return False, "Invalid multiplier"
-    if user.energy < Config.ENERGY_PER_SPIN * multiplier:
+    energy_cost = Config.ENERGY_PER_SPIN * multiplier
+    coin_cost = Config.COIN_COST_PER_SPIN * multiplier
+    if user.energy < energy_cost:
         return False, "Not enough energy"
+    if user.coins < coin_cost:
+        return False, "Not enough SharkCoins"
     return True, ""
 
 
@@ -237,7 +241,11 @@ def apply_spin(session, user: User, multiplier: int = 1):
     rolled: List[SlotSymbol] = [random.choices(symbols, weights)[0] for _ in range(3)]
     reels = tuple(sym.emoji for sym in rolled)
 
-    user.energy -= Config.ENERGY_PER_SPIN * multiplier
+    energy_cost = Config.ENERGY_PER_SPIN * multiplier
+    coin_cost = Config.COIN_COST_PER_SPIN * multiplier
+
+    user.energy -= energy_cost
+    user.coins -= coin_cost
 
     rewards, label = calc_payout(rolled, multiplier)
 
@@ -248,11 +256,22 @@ def apply_spin(session, user: User, multiplier: int = 1):
     user.coins += coins_delta
     user.energy += energy_delta
     user.wheel_tokens += wheel_delta
-    user.total_earned += coins_delta
-    user.weekly_coins = max(0, (user.weekly_coins or 0) + coins_delta)
+    net_coins = coins_delta - coin_cost
+    user.total_earned += max(coins_delta, 0)
+    user.weekly_coins = max(0, (user.weekly_coins or 0) + net_coins)
     refresh_level(user)
 
-    return True, "", coins_delta, {"symbols": reels, "label": label, "rewards": rewards}
+    result_payload = {
+        "symbols": reels,
+        "label": label,
+        "rewards": rewards,
+        "coin_cost": coin_cost,
+        "net_coins": net_coins,
+        "energy_spent": energy_cost,
+        "multiplier": multiplier,
+    }
+
+    return True, "", net_coins, result_payload
 
 
 def calc_symbol_rewards(reels: Sequence[SlotSymbol]) -> Dict[str, int]:
@@ -442,51 +461,92 @@ def complete_album(session, user: User, album: StickerAlbum):
 
 # --- Events ----------------------------------------------------------------
 
-def ensure_demo_event(session):
-    event = session.query(LiveEvent).filter_by(slug="grand-regatta").one_or_none()
-    if event:
-        return event
 
+def ensure_signature_events(session) -> List[LiveEvent]:
     now = datetime.utcnow()
-    event = LiveEvent(
-        slug="grand-regatta",
-        name="Grand Regatta",
-        description="Spin the reels to earn regatta tokens and cash-in spins",
-        start_at=now - timedelta(days=1),
-        end_at=now + timedelta(days=5),
-        target_spins=150,
-        reward_type="spins",
-        reward_amount=5,
-    )
-    session.add(event)
+    upcoming = now + timedelta(days=2)
+    week_out = now + timedelta(days=7)
+
+    definitions = [
+        {
+            "slug": "grand-regatta",
+            "name": "Grand Regatta",
+            "description": "Spin the reels to push your crew around the neon track and bank bonus spins.",
+            "start_at": now - timedelta(days=1),
+            "end_at": week_out,
+            "target_spins": 300,
+            "reward_type": "spins",
+            "reward_amount": 8,
+            "event_type": "live",
+            "banner_url": "/static/images/events/grand-regatta.svg",
+        },
+        {
+            "slug": "abyssal-bounty",
+            "name": "Abyssal Bounty Hunt",
+            "description": "Collect SharkCoins during night runs to unlock progressive coin crates.",
+            "start_at": now - timedelta(hours=6),
+            "end_at": now + timedelta(days=2),
+            "target_spins": 180,
+            "reward_type": "coins",
+            "reward_amount": 3200,
+            "event_type": "limited",
+            "banner_url": "/static/images/events/abyssal-bounty.svg",
+        },
+        {
+            "slug": "turbine-frenzy",
+            "name": "Turbine Frenzy Weekend",
+            "description": "Charge the turbines with energy-heavy wagers to earn elite wheel tokens.",
+            "start_at": upcoming,
+            "end_at": upcoming + timedelta(days=3),
+            "target_spins": 220,
+            "reward_type": "wheel_tokens",
+            "reward_amount": 6,
+            "event_type": "seasonal",
+            "banner_url": "/static/images/events/turbine-frenzy.svg",
+        },
+    ]
+
+    events: List[LiveEvent] = []
+    for data in definitions:
+        event = session.query(LiveEvent).filter_by(slug=data["slug"]).one_or_none()
+        if not event:
+            event = LiveEvent(**data)
+            session.add(event)
+        else:
+            for key, value in data.items():
+                setattr(event, key, value)
+        events.append(event)
     session.commit()
-    return event
+    return events
 
 
 def record_event_spin(session, user: User, multiplier: int):
-    event = ensure_demo_event(session)
-    if not event:
+    events = ensure_signature_events(session)
+    if not events:
         return
-    progress = (
-        session.query(EventProgress)
-        .filter(EventProgress.event_id == event.id, EventProgress.user_id == user.id)
-        .one_or_none()
-    )
-    if not progress:
-        progress = EventProgress(event_id=event.id, user_id=user.id, progress=0, claimed=False)
-        session.add(progress)
-    progress.progress += multiplier
-    if progress.progress >= event.target_spins and not progress.claimed:
-        if event.reward_type == "spins":
-            user.energy += event.reward_amount * Config.ENERGY_PER_SPIN
-        elif event.reward_type == "coins":
-            user.coins += event.reward_amount
-            user.total_earned += event.reward_amount
-            user.weekly_coins = max(0, (user.weekly_coins or 0) + event.reward_amount)
-            refresh_level(user)
-        else:
-            user.wheel_tokens += event.reward_amount
-        progress.claimed = True
+    for event in events:
+        progress = (
+            session.query(EventProgress)
+            .filter(EventProgress.event_id == event.id, EventProgress.user_id == user.id)
+            .one_or_none()
+        )
+        if not progress:
+            progress = EventProgress(
+                event_id=event.id, user_id=user.id, progress=0, claimed=False
+            )
+            session.add(progress)
+        progress.progress += multiplier
+        if progress.progress >= event.target_spins and not progress.claimed:
+            if event.reward_type == "spins":
+                user.energy += event.reward_amount * Config.ENERGY_PER_SPIN
+            elif event.reward_type == "coins":
+                user.coins += event.reward_amount
+                user.total_earned += event.reward_amount
+                user.weekly_coins = max(0, (user.weekly_coins or 0) + event.reward_amount)
+                refresh_level(user)
+            else:
+                user.wheel_tokens += event.reward_amount
+            progress.claimed = True
     session.flush()
 
 

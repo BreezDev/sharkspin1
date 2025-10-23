@@ -9,15 +9,32 @@
 </head>
 <body>
   <div class="app-shell">
-    <header class="masthead">
-      <div class="hero">
-        <img src="/static/images/hero-boinkers.svg" alt="SharkSpin" class="hero-art" />
-        <div class="hero-copy">
-          <h1>SharkSpin Command Deck</h1>
-          <p>Dive into the slot bay, charge the Wheel of Tides, and manage your crew without leaving the mini app.</p>
+    <header class="slot-header">
+      <div class="brand-lockup">
+        <img src="/static/images/hero-boinkers.svg" alt="SharkSpin crest" class="brand-crest" />
+        <div class="brand-copy">
+          <h1>SharkSpin Neon Bay</h1>
+          <p>High-voltage reels, oceanic jackpots, and a leaderboard lit by SharkCoins.</p>
         </div>
       </div>
+      <div class="jackpot-ticker">
+        <span>🌊 Mega Pot: 1,250,000🪙 • ⚡ Energy Rush every 6h • 🌀 Turbo Frenzy weekend unlocks Friday</span>
+      </div>
       <div class="stats-row">
+        <div class="stat-card highlight">
+          <span class="label">SharkCoins</span>
+          <span class="value" id="coins">0</span>
+          <small class="caption">Primary currency for wagers & shop pulls</small>
+        </div>
+        <div class="stat-card">
+          <span class="label">Energy</span>
+          <span class="value" id="energy">0</span>
+          <small class="caption">Spend to unlock high-voltage spins</small>
+        </div>
+        <div class="stat-card">
+          <span class="label">Wheel Tokens</span>
+          <span class="value" id="wheelTokens">0</span>
+        </div>
         <div class="stat-card">
           <span class="label">Level</span>
           <span class="value" id="level">1</span>
@@ -27,44 +44,28 @@
           </div>
         </div>
         <div class="stat-card">
-          <span class="label">SharkCoins</span>
-          <span class="value" id="coins">0</span>
-        </div>
-        <div class="stat-card">
-          <span class="label">Energy</span>
-          <span class="value" id="energy">0</span>
-        </div>
-        <div class="stat-card">
-          <span class="label">Wheel Tokens</span>
-          <span class="value" id="wheelTokens">0</span>
-        </div>
-        <div class="stat-card highlight">
           <span class="label">Weekly SharkCoins</span>
           <span class="value" id="weeklyCoins">0</span>
-          <small class="caption">Climb the Apex board before reset</small>
+          <small class="caption">Leaderboard resets Monday 00:00 UTC</small>
         </div>
       </div>
     </header>
-
-    <section class="daily-card" id="dailyCard">
-      <div class="daily-copy">
-        <img src="/static/images/daily-chest.svg" alt="Daily reward" />
-        <div>
-          <h2>Daily Captain's Log</h2>
-          <p id="dailySummary">Claim your reward to keep the streak alive.</p>
-          <div class="daily-details" id="dailyDetails"></div>
-        </div>
-      </div>
-      <button id="claimDailyBtn" class="primary">Claim Reward</button>
-    </section>
 
     <main class="content">
       <section class="view active" data-view="main">
         <div class="panel slot-panel">
           <header class="panel-header">
             <h2>Main Spin Bay</h2>
-            <p>Set your wager multiplier and send the reels roaring.</p>
+            <p>Dial in a multiplier, burn energy and SharkCoins, and let the neon reels decide your fate.</p>
           </header>
+          <div class="slot-marquee" id="slotMarquee">
+            <span>⚠️ Higher multipliers scale both your wager and potential rewards. Energy is priceless—plan your run.</span>
+          </div>
+          <div class="slot-flares">
+            <img src="/static/images/seasonal-wheel.svg" alt="Wheel" />
+            <img src="/static/images/seasonal-energy.svg" alt="Energy" />
+            <img src="/static/images/seasonal-sticker.svg" alt="Album" />
+          </div>
           <div class="slot-stage">
             <div class="slot-frame">
               <div class="slot-topper"></div>
@@ -79,6 +80,16 @@
               <div class="slot-base"></div>
             </div>
           </div>
+          <div class="wager-info">
+            <div class="wager-card">
+              <span class="label">Energy Wager</span>
+              <span class="value" id="wagerEnergy">1⚡</span>
+            </div>
+            <div class="wager-card">
+              <span class="label">Coin Wager</span>
+              <span class="value" id="wagerCoins">0🪙</span>
+            </div>
+          </div>
           <div class="multiplier-buttons">
             <!-- multiplier chips injected via JS -->
           </div>
@@ -86,20 +97,6 @@
             <button id="spinBtn" class="primary large">Spin the Main Cab 🎰</button>
             <div id="result" class="result"></div>
           </div>
-        </div>
-
-        <div class="panel callouts-panel">
-          <h2>Operations Briefing</h2>
-          <div id="calloutsGrid" class="callouts-grid"></div>
-        </div>
-
-        <div class="panel events-panel">
-          <h2>Live Events</h2>
-          <div id="eventsList" class="events-list"></div>
-        </div>
-        <div class="panel seasonal-highlight">
-          <h2>Seasonal Spotlight</h2>
-          <div id="seasonalEvents" class="seasonal-carousel"></div>
         </div>
       </section>
 
@@ -125,20 +122,43 @@
         </div>
       </section>
 
-      <section class="view" data-view="events">
-        <div class="panel seasonal-panel">
-          <h2>Event Playbill</h2>
-          <p class="panel-subtitle">Track live tournaments, Joker fights, and album rushes.</p>
-          <div id="eventsBoard" class="events-board"></div>
-        </div>
-      </section>
-
       <section class="view" data-view="leaderboard">
         <div class="panel leaderboard-panel">
           <h2>Weekly Apex Crew</h2>
           <p class="panel-subtitle">Top captains ranked by SharkCoins earned this week.</p>
           <ol id="leaderboardList" class="leaderboard-list"></ol>
           <div id="leaderboardMe" class="leaderboard-me"></div>
+        </div>
+        <div class="panel daily-card" id="dailyCard">
+          <div class="daily-copy">
+            <img src="/static/images/daily-chest.svg" alt="Daily reward" />
+            <div>
+              <h2>Daily Captain's Log</h2>
+              <p id="dailySummary">Claim your reward to keep the streak alive.</p>
+              <div class="daily-details" id="dailyDetails"></div>
+            </div>
+          </div>
+          <button id="claimDailyBtn" class="primary">Claim Reward</button>
+        </div>
+        <div class="panel events-panel">
+          <h2>Live Events</h2>
+          <div id="eventsList" class="events-list"></div>
+        </div>
+        <div class="panel seasonal-highlight">
+          <h2>Seasonal Spotlight</h2>
+          <div id="seasonalEvents" class="seasonal-carousel"></div>
+        </div>
+        <div class="panel callouts-panel">
+          <div class="panel-header inline">
+            <h2>Operations Briefing</h2>
+            <button class="ghost" id="openHelpBtn">View Handbook →</button>
+          </div>
+          <div id="calloutsGrid" class="callouts-grid"></div>
+        </div>
+        <div class="panel seasonal-panel">
+          <h2>Event Playbill</h2>
+          <p class="panel-subtitle">Track live tournaments, Joker fights, and album rushes.</p>
+          <div id="eventsBoard" class="events-board"></div>
         </div>
       </section>
 
