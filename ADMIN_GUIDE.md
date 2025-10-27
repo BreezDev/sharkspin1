@@ -10,8 +10,8 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 | Coin cost, energy cost, multiplier presets | `config.py` (`COIN_COST_PER_SPIN`, `ENERGY_PER_SPIN`, `SPIN_MULTIPLIER_PRESETS`) | The web app reads these values and exposes them in the wager HUD. |
 | Albums & sticker packs | `/admin/albums` + `/admin/stickers` APIs | Seed defaults via `ensure_default_albums` or curate directly from the admin panel. |
 | Live + seasonal events & rewards | `/admin/events` | Create, edit, or retire entries. The helper `ensure_signature_events` (game_logic.py) seeds the three showcase events and banner art. |
-| Wheel of Tides rewards | `/admin/wheel` | Edit label, color, reward type/amount, or probability weight per slice. |
-| Shop bundles | `/admin/shop` | Manage energy bundles, bonus spin counts, and art references. |
+| Wheel of Tides slices & odds | `/admin/wheel` | Edit label, reward type/amount, slice color, and `weight` (higher = more common) to reshape the wheel. |
+| Star Shop catalog | `/admin/shop` | Add/remove in-app purchases, toggle availability, or retheme art and descriptions without redeploying. |
 | Reward links & broadcast messages | `/admin/rewards`, `/admin/broadcasts` | Generate redeemable links, inspect redemptions, or send Telegram broadcasts with reward URLs. |
 | Leaderboard weekly payouts | `/admin/leaderboard` | Issue SharkCoin/energy rewards to the top captains from the dashboard. |
 
@@ -35,10 +35,11 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 ## 2. Slot Machine & Economy
 
 * Spin wagers now consume **energy and SharkCoins**. Configure the base drain through:
-  * `Config.ENERGY_PER_SPIN` – energy drained per multiplier tier.
-  * `Config.COIN_COST_PER_SPIN` – coins removed per multiplier tier.
-  * `Config.SPIN_MULTIPLIER_PRESETS` – the selectable multipliers (the UI renders up to 100k wagers).
+  * `Config.ENERGY_PER_SPIN` – energy drained per multiplier tier (default 3⚡).
+  * `Config.COIN_COST_PER_SPIN` – coins removed per multiplier tier (default 75🪙).
+  * `Config.SPIN_MULTIPLIER_PRESETS` – the selectable multipliers surfaced in the wager HUD.
 * Slot symbols, reward mixes, and "no loot" odds are editable through the admin panel (`/admin/slot-symbols`) or directly inside `game_logic.ensure_default_slot_symbols()`.
+* House edge tuning now lives in `Config.SPIN_PAYOUT_COINS_SCALAR`, `SPIN_PAYOUT_ENERGY_SCALAR`, `SPIN_PAYOUT_TOKEN_SCALAR`, and `SPIN_BRICK_CHANCE`. Lower the scalars or raise the brick chance to make the machine harsher.
 * Level progress uses `user.total_earned` against the thresholds returned by `_xp_threshold` (see `app.py`). Update `Config.LEVEL_XP_CURVE` and `LEVEL_REWARDS` to re-balance XP pacing or bonus drops.
 
 ## 3. Daily Rewards
@@ -55,6 +56,7 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 ## 4. Wheel of Tides
 
 * Rewards live in the `wheel_rewards` table. Update via SQL or adjust defaults in `ensure_default_wheel_rewards` inside `game_logic.py`.
+* The admin dashboard exposes a **Wheel Rewards** form (`/admin/wheel`). Edit label, reward type, amount, color, and `weight` (probability weight) to rebalance slices on the fly.
 * Cooldown + token costs come from `Config.WHEEL_COOLDOWN_HOURS`, `Config.DAILY_FREE_WHEEL_SPINS`, and `Config.WHEEL_TOKEN_COST`.
 * Wheel art layers sit in `static/images/wheel-glow.svg`, `wheel-frame.svg`, and `wheel-center.svg`. Replace those files with identically named assets to reskin the wheel.
 
@@ -76,6 +78,7 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 ## 7. Star Shop (In-App Purchases)
 
 * Bundle catalog = `Config.STAR_PACKAGES`. Each dict supports: `id`, `name`, `stars`, `energy`, `bonus_spins`, `description`, and optional `art_url`.
+* Live bundles can also be created or retired from the **Star Shop** card in `/admin/shop`. Toggle `is_active` to soft-delete offers without code changes.
 * Assets referenced by `art_url` live in `static/images/` (e.g., `star-pack-coral.svg`). Replace or add SVGs there for new bundle art.
 * The web app calls `/api/shop` for catalog data and `/api/shop/order` to create Telegram Stars invoices through `createInvoiceLink`.
 * Ensure `TELEGRAM_BOT_TOKEN` and `BOT_USERNAME` are configured so `_build_invoice_link` in `app.py` can reach Telegram.

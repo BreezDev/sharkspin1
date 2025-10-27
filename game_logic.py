@@ -9,6 +9,7 @@ from models import (
     EventProgress,
     LiveEvent,
     Sticker,
+    StickerAlbum,
     ShopItem,
     SlotSymbol,
     User,
@@ -50,67 +51,67 @@ def ensure_default_slot_symbols(session) -> List[SlotSymbol]:
 
     defaults: Sequence[Tuple[str, str, str, float, Dict[str, int], str, str]] = (
         (
+            "🌊",
+            "Empty Net",
+            "House keeps the haul — no reward on this catch",
+            3.6,
+            {"coins": 0, "energy": 0, "wheel_tokens": 0},
+            "#1d4ed8",
+            "/static/images/header-bg.svg",
+        ),
+        (
             "🪙",
             "Treasure Cache",
-            "Reliable coin drop for steady XP",
-            1.8,
-            {"coins": 120, "energy": 2, "wheel_tokens": 0},
+            "Coin drip that feeds XP without guaranteeing profit",
+            1.4,
+            {"coins": 140, "energy": 0, "wheel_tokens": 0},
             "#ffd447",
             "/static/images/seasonal-sticker.svg",
         ),
         (
+            "🎁",
+            "Mystery Cache",
+            "Modest coins with almost no kickbacks",
+            0.85,
+            {"coins": 80, "energy": 0, "wheel_tokens": 0},
+            "#facc15",
+            "/static/images/seasonal-sticker.svg",
+        ),
+        (
+            "💠",
+            "Prism Vault",
+            "Rare payout that dents the house edge",
+            0.6,
+            {"coins": 320, "energy": 0, "wheel_tokens": 0},
+            "#f472b6",
+            "/static/images/seasonal-wheel.svg",
+        ),
+        (
             "⚡",
             "Energy Surge",
-            "Power-up burst that fuels marathon spins",
-            1.5,
-            {"coins": 40, "energy": 6, "wheel_tokens": 0},
+            "Hard-to-find burst that keeps marathon sessions alive",
+            0.35,
+            {"coins": 30, "energy": 12, "wheel_tokens": 0},
             "#5cf1ff",
             "/static/images/seasonal-energy.svg",
         ),
         (
             "🌀",
-            "Token Typhoon",
-            "Wheel tokens for premium prize wheels",
-            1.1,
-            {"coins": 60, "energy": 1, "wheel_tokens": 1},
+            "Token Squall",
+            "Wheel tokens for the truly lucky",
+            0.22,
+            {"coins": 40, "energy": 0, "wheel_tokens": 14},
             "#8b5cf6",
-            "/static/images/seasonal-wheel.svg",
-        ),
-        (
-            "💠",
-            "Prism Vault",
-            "High yield crystal cache with coins",
-            0.9,
-            {"coins": 220, "energy": 3, "wheel_tokens": 0},
-            "#f472b6",
             "/static/images/seasonal-wheel.svg",
         ),
         (
             "🦈",
             "Shark Jackpot",
-            "Signature shark pull with all resources",
-            0.6,
-            {"coins": 360, "energy": 6, "wheel_tokens": 2},
+            "Signature pull with heavy house resistance",
+            0.12,
+            {"coins": 620, "energy": 6, "wheel_tokens": 20},
             "#22d3ee",
             "/static/images/hero-boinkers.svg",
-        ),
-        (
-            "🎁",
-            "Mystery Cache",
-            "Balanced grab bag of goodies",
-            0.85,
-            {"coins": 140, "energy": 2, "wheel_tokens": 1},
-            "#facc15",
-            "/static/images/seasonal-sticker.svg",
-        ),
-        (
-            "🌊",
-            "Empty Net",
-            "Sometimes the tides are quiet – no loot",
-            1.25,
-            {"coins": 0, "energy": 0, "wheel_tokens": 0},
-            "#38bdf8",
-            "/static/images/header-bg.svg",
         ),
     )
 
@@ -307,12 +308,27 @@ def calc_payout(reels: Sequence[SlotSymbol], mult: int) -> Tuple[Dict[str, int],
         if value
     }
 
-    if sum(adjusted.values()) == 0:
-        label = "Empty Net"
-
+    payouts = {}
     for key in ("coins", "energy", "wheel_tokens"):
-        adjusted.setdefault(key, 0)
-    return adjusted, label
+        base_value = adjusted.get(key, 0)
+        if key == "coins":
+            scalar = Config.SPIN_PAYOUT_COINS_SCALAR
+        elif key == "energy":
+            scalar = Config.SPIN_PAYOUT_ENERGY_SCALAR
+        else:
+            scalar = Config.SPIN_PAYOUT_TOKEN_SCALAR
+        scaled_value = int(base_value * scalar)
+        if key != "coins" and base_value > 0 and scaled_value <= 0:
+            scaled_value = 1
+        payouts[key] = max(scaled_value, 0)
+
+    total_reward = sum(payouts.values())
+    if total_reward > 0 and random.random() < Config.SPIN_BRICK_CHANCE:
+        return {"coins": 0, "energy": 0, "wheel_tokens": 0}, "House Edge"
+
+    if total_reward == 0:
+        label = "Empty Net"
+    return payouts, label
 
 
 # --- Wheel Of Fortune ------------------------------------------------------
@@ -322,14 +338,14 @@ def ensure_default_wheel_rewards(session) -> List[WheelReward]:
     if rewards:
         return rewards
     defaults = [
-        ("250 Coins", "coins", 250, 2.5, "#1de5a0"),
-        ("+1 Spin", "spins", 1, 2.0, "#3dd5ff"),
-        ("Mega 1000", "coins", 1000, 0.6, "#f9c74f"),
-        ("Energy Burst", "energy", 50, 1.8, "#ff6f59"),
-        ("Sticker Pack", "sticker_pack", 1, 2.1, "#c77dff"),
-        ("Jackpot 5000", "coins", 5000, 0.25, "#ff477e"),
-        ("Lucky 100", "coins", 100, 3.2, "#0096c7"),
-        ("+3 Spins", "spins", 3, 0.9, "#9ef01a"),
+        ("House Favor 400", "coins", 400, 3.6, "#1de5a0"),
+        ("Safe Return 900", "coins", 900, 1.4, "#3dd5ff"),
+        ("Sticker Cache", "sticker_pack", 1, 0.7, "#c77dff"),
+        ("Energy Drip", "energy", 8, 0.55, "#ff6f59"),
+        ("Wheel Token", "wheel_tokens", 1, 0.35, "#8b5cf6"),
+        ("Mega Surge 1500", "coins", 1500, 0.42, "#f9c74f"),
+        ("Double Token", "wheel_tokens", 2, 0.18, "#7c3aed"),
+        ("Jackpot 5000", "coins", 5000, 0.12, "#ff477e"),
     ]
     for label, rtype, amount, weight, color in defaults:
         rewards.append(

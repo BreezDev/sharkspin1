@@ -41,10 +41,58 @@ a {
 .app-shell {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 24px 18px 96px;
+  padding: 18px 18px 96px;
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.resource-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  background: rgba(3, 22, 40, 0.92);
+  position: sticky;
+  top: 12px;
+  z-index: 12;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(4, 18, 38, 0.45);
+}
+
+.resource-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: rgba(2, 16, 32, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  box-shadow: inset 0 0 12px rgba(59, 130, 246, 0.18);
+}
+
+.resource-icon {
+  font-size: 1.2rem;
+}
+
+.resource-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resource-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(190, 228, 255, 0.7);
+}
+
+.resource-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
 }
 
 .slot-header {
@@ -123,9 +171,9 @@ a {
   }
 }
 
-.stats-row {
+.status-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
   margin-top: 22px;
 }
@@ -195,41 +243,43 @@ a {
   }
 }
 
-.stat-card {
+.status-card {
   background: rgba(2, 16, 32, 0.82);
   border-radius: 18px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid rgba(0, 240, 255, 0.18);
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 130px;
+  box-shadow: 0 16px 36px rgba(0, 12, 30, 0.4);
 }
 
-.stat-card .label {
+.status-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.status-card .label {
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 1.4px;
-  color: var(--muted);
+  letter-spacing: 1.2px;
+  color: rgba(202, 232, 255, 0.78);
 }
 
-.stat-card .value {
+.status-card .value {
+  font-family: 'Orbitron', sans-serif;
   font-size: 1.8rem;
-  font-weight: 600;
   color: var(--accent);
 }
 
-.stat-card .caption {
-  font-size: 0.75rem;
+.status-card .caption {
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.6);
-}
-
-.stat-card.highlight {
-  background: linear-gradient(135deg, rgba(255, 196, 72, 0.18), rgba(75, 0, 130, 0.4));
-  border: 1px solid rgba(255, 196, 72, 0.45);
-  box-shadow: 0 16px 36px rgba(255, 196, 72, 0.25);
 }
 
 .progress-wrap {
@@ -1067,6 +1117,16 @@ progress::-moz-progress-bar {
 @media (max-width: 768px) {
   .app-shell {
     padding: 18px 14px 96px;
+  }
+
+  .resource-nav {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .resource-pill {
+    flex: 1 1 140px;
+    justify-content: center;
   }
 
   .brand-lockup {

@@ -19,23 +19,30 @@ const state = {
 const SLOT_SYMBOLS = ['🪙', '⚡', '🌀', '💠', '🦈', '🎁'];
 const DEFAULT_MULTIPLIERS = [
   1,
+  2,
   5,
   10,
-  25,
+  20,
   50,
   100,
-  150,
   250,
   500,
-  700,
+  750,
   1000,
-  2000,
-  5000,
-  10000,
-  20000,
-  50000,
-  100000,
+  1500,
 ];
+
+const compactFormatter = Intl.NumberFormat('en', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+function formatNumber(value) {
+  if (value === undefined || value === null || Number.isNaN(value)) {
+    return '0';
+  }
+  return compactFormatter.format(Number(value));
+}
 
 async function postJSON(url, data) {
   const res = await fetch(url, {
@@ -142,10 +149,10 @@ function updateWagerDisplay() {
   const energyCost = (state.energyPerSpin || 1) * state.multiplier;
   const coinCost = (state.coinCostPerSpin || 0) * state.multiplier;
   if (energyEl) {
-    energyEl.textContent = `${energyCost.toLocaleString()}⚡`;
+    energyEl.textContent = `${formatNumber(energyCost)}⚡`;
   }
   if (coinEl) {
-    coinEl.textContent = `${coinCost.toLocaleString()}🪙`;
+    coinEl.textContent = `${formatNumber(coinCost)}🪙`;
   }
   const spinBtn = document.getElementById('spinBtn');
   if (spinBtn) {
@@ -158,18 +165,29 @@ function updateWagerDisplay() {
 function updateStats(payload) {
   if (!payload) return;
   if (payload.coins !== undefined) {
-    document.getElementById('coins').textContent = payload.coins;
+    const coinsEl = document.getElementById('coins');
+    if (coinsEl) coinsEl.textContent = formatNumber(payload.coins);
     state.coins = payload.coins;
     updateMultiplierButtons(state.energy, payload.coins);
   }
   if (payload.energy !== undefined) {
-    document.getElementById('energy').textContent = payload.energy;
+    const energyEl = document.getElementById('energy');
+    if (energyEl) energyEl.textContent = formatNumber(payload.energy);
     state.energy = payload.energy;
     updateMultiplierButtons(payload.energy, state.coins);
   }
-  if (payload.level !== undefined) document.getElementById('level').textContent = payload.level;
-  if (payload.wheel_tokens !== undefined) document.getElementById('wheelTokens').textContent = payload.wheel_tokens;
-  if (payload.weekly_coins !== undefined) document.getElementById('weeklyCoins').textContent = payload.weekly_coins;
+  if (payload.level !== undefined) {
+    const levelEl = document.getElementById('level');
+    if (levelEl) levelEl.textContent = formatNumber(payload.level);
+  }
+  if (payload.wheel_tokens !== undefined) {
+    const wheelEl = document.getElementById('wheelTokens');
+    if (wheelEl) wheelEl.textContent = formatNumber(payload.wheel_tokens);
+  }
+  if (payload.weekly_coins !== undefined) {
+    const weeklyEl = document.getElementById('weeklyCoins');
+    if (weeklyEl) weeklyEl.textContent = formatNumber(payload.weekly_coins);
+  }
   if (payload.energy_per_spin !== undefined) state.energyPerSpin = payload.energy_per_spin;
   if (payload.coin_cost_per_spin !== undefined) state.coinCostPerSpin = payload.coin_cost_per_spin;
   if (Array.isArray(payload.spin_multipliers) && payload.spin_multipliers.length) {
@@ -201,9 +219,9 @@ function animateReels(finalSymbols) {
 
 function formatRewards(rewards = {}) {
   const parts = [];
-  if (rewards.coins) parts.push(`+${rewards.coins}🪙`);
-  if (rewards.energy) parts.push(`+${rewards.energy}⚡`);
-  if (rewards.wheel_tokens) parts.push(`+${rewards.wheel_tokens}🌀`);
+  if (rewards.coins) parts.push(`+${formatNumber(rewards.coins)}🪙`);
+  if (rewards.energy) parts.push(`+${formatNumber(rewards.energy)}⚡`);
+  if (rewards.wheel_tokens) parts.push(`+${formatNumber(rewards.wheel_tokens)}🌀`);
   return parts.length ? parts.join(' • ') : 'No reward';
 }
 
@@ -259,11 +277,11 @@ async function spin() {
   const rewardText = formatRewards(res.result?.rewards);
   const label = res.result?.label ? ` (${res.result.label})` : '';
   const hasCoinCost = typeof res.result?.coin_cost === 'number';
-  const wagerCoin = hasCoinCost ? `Wager ${res.result.coin_cost.toLocaleString()}🪙` : '';
+  const wagerCoin = hasCoinCost ? `Wager ${formatNumber(res.result.coin_cost)}🪙` : '';
   const hasEnergySpend = typeof res.result?.energy_spent === 'number';
-  const energySpent = hasEnergySpend ? `Spent ${res.result.energy_spent.toLocaleString()}⚡` : '';
+  const energySpent = hasEnergySpend ? `Spent ${formatNumber(res.result.energy_spent)}⚡` : '';
   const net = typeof res.result?.net_coins === 'number'
-    ? `Net ${res.result.net_coins >= 0 ? '+' : ''}${res.result.net_coins.toLocaleString()}🪙`
+    ? `Net ${res.result.net_coins >= 0 ? '+' : ''}${formatNumber(res.result.net_coins)}🪙`
     : '';
   const messageBits = [wagerCoin, energySpent, rewardText, net].filter(Boolean);
   document.getElementById('result').textContent = `${messageBits.join(' • ')}${label}`;
@@ -551,9 +569,9 @@ function renderDaily(daily) {
   }
   const reward = daily.next_reward || {};
   summary.textContent = daily.can_claim
-    ? `Streak ${daily.streak || 0}. Claim now for ${reward.coins || 0}🪙, ${reward.energy || 0}⚡.`
+    ? `Streak ${formatNumber(daily.streak || 0)}. Claim now for ${formatNumber(reward.coins || 0)}🪙, ${formatNumber(reward.energy || 0)}⚡.`
     : `Next reward in ${formatCountdown(daily.seconds_until)}.`;
-  details.textContent = `Next bonus: ${reward.coins || 0}🪙 • ${reward.energy || 0}⚡${reward.wheel_tokens ? ` • +${reward.wheel_tokens}🌀` : ''}`;
+  details.textContent = `Next bonus: ${formatNumber(reward.coins || 0)}🪙 • ${formatNumber(reward.energy || 0)}⚡${reward.wheel_tokens ? ` • +${formatNumber(reward.wheel_tokens)}🌀` : ''}`;
   button.disabled = !daily.can_claim;
   button.textContent = daily.can_claim ? 'Claim Reward' : 'Cooldown';
 }
@@ -583,7 +601,7 @@ async function claimDaily() {
   }
   updateStats(res);
   const reward = res.reward || {};
-  alert(`Reward claimed! +${reward.coins || 0}🪙, +${reward.energy || 0}⚡${reward.wheel_tokens ? `, +${reward.wheel_tokens}🌀` : ''}`);
+  alert(`Reward claimed! +${formatNumber(reward.coins || 0)}🪙, +${formatNumber(reward.energy || 0)}⚡${reward.wheel_tokens ? `, +${formatNumber(reward.wheel_tokens)}🌀` : ''}`);
 }
 
 function renderShop(packages = []) {
