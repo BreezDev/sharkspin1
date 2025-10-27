@@ -9,12 +9,28 @@ from models import (
     EventProgress,
     LiveEvent,
     Sticker,
+    StickerAlbum,
     ShopItem,
     SlotSymbol,
     User,
     UserSticker,
     WheelReward,
 )
+
+
+def clamp_token_drop(amount: int) -> int:
+    """Ensure we never hand out more than a single wheel token."""
+
+    return 1 if amount and amount > 0 else 0
+
+
+def award_wheel_token(user: User, amount: int) -> int:
+    """Apply the clamped token drop to a user and return the credited amount."""
+
+    tokens = clamp_token_drop(amount)
+    if tokens:
+        user.wheel_tokens += tokens
+    return tokens
 
 
 def xp_threshold(level_index: int) -> int:
@@ -50,67 +66,67 @@ def ensure_default_slot_symbols(session) -> List[SlotSymbol]:
 
     defaults: Sequence[Tuple[str, str, str, float, Dict[str, int], str, str]] = (
         (
+            "🌊",
+            "Empty Net",
+            "House keeps the haul — no reward on this catch",
+            3.6,
+            {"coins": 0, "energy": 0, "wheel_tokens": 0},
+            "#1d4ed8",
+            "/static/images/header-bg.svg",
+        ),
+        (
             "🪙",
             "Treasure Cache",
-            "Reliable coin drop for steady XP",
-            1.8,
-            {"coins": 120, "energy": 2, "wheel_tokens": 0},
+            "Coin drip that feeds XP without guaranteeing profit",
+            1.4,
+            {"coins": 140, "energy": 0, "wheel_tokens": 0},
             "#ffd447",
             "/static/images/seasonal-sticker.svg",
         ),
         (
+            "🎁",
+            "Mystery Cache",
+            "Modest coins with almost no kickbacks",
+            0.85,
+            {"coins": 80, "energy": 0, "wheel_tokens": 0},
+            "#facc15",
+            "/static/images/seasonal-sticker.svg",
+        ),
+        (
+            "💠",
+            "Prism Vault",
+            "Rare payout that dents the house edge",
+            0.6,
+            {"coins": 320, "energy": 0, "wheel_tokens": 0},
+            "#f472b6",
+            "/static/images/seasonal-wheel.svg",
+        ),
+        (
             "⚡",
             "Energy Surge",
-            "Power-up burst that fuels marathon spins",
-            1.5,
-            {"coins": 40, "energy": 6, "wheel_tokens": 0},
+            "Hard-to-find burst that keeps marathon sessions alive",
+            0.35,
+            {"coins": 30, "energy": 12, "wheel_tokens": 0},
             "#5cf1ff",
             "/static/images/seasonal-energy.svg",
         ),
         (
             "🌀",
-            "Token Typhoon",
-            "Wheel tokens for premium prize wheels",
-            1.1,
-            {"coins": 60, "energy": 1, "wheel_tokens": 1},
+            "Token Squall",
+            "Wheel tokens for the truly lucky",
+            0.22,
+            {"coins": 40, "energy": 0, "wheel_tokens": 1},
             "#8b5cf6",
-            "/static/images/seasonal-wheel.svg",
-        ),
-        (
-            "💠",
-            "Prism Vault",
-            "High yield crystal cache with coins",
-            0.9,
-            {"coins": 220, "energy": 3, "wheel_tokens": 0},
-            "#f472b6",
             "/static/images/seasonal-wheel.svg",
         ),
         (
             "🦈",
             "Shark Jackpot",
-            "Signature shark pull with all resources",
-            0.6,
-            {"coins": 360, "energy": 6, "wheel_tokens": 2},
+            "Signature pull with heavy house resistance",
+            0.12,
+            {"coins": 620, "energy": 6, "wheel_tokens": 1},
             "#22d3ee",
             "/static/images/hero-boinkers.svg",
-        ),
-        (
-            "🎁",
-            "Mystery Cache",
-            "Balanced grab bag of goodies",
-            0.85,
-            {"coins": 140, "energy": 2, "wheel_tokens": 1},
-            "#facc15",
-            "/static/images/seasonal-sticker.svg",
-        ),
-        (
-            "🌊",
-            "Empty Net",
-            "Sometimes the tides are quiet – no loot",
-            1.25,
-            {"coins": 0, "energy": 0, "wheel_tokens": 0},
-            "#38bdf8",
-            "/static/images/header-bg.svg",
         ),
     )
 
@@ -157,7 +173,7 @@ def ensure_default_shop_items(session) -> List[ShopItem]:
             "energy_100",
             50,
             100,
-            1,
+            0,
             "Starter burst to keep the reels humming.",
         ),
         (
@@ -165,24 +181,24 @@ def ensure_default_shop_items(session) -> List[ShopItem]:
             "energy_250",
             120,
             250,
-            3,
-            "Big energy dive plus bonus Wheel Tokens.",
+            0,
+            "Big energy dive plus bonus energy reserves.",
         ),
         (
             "Mega Reef 600",
             "energy_600",
             260,
             600,
-            8,
-            "Legendary boost with neon wheel fireworks.",
+            1,
+            "Legendary boost with a whisper of wheel access.",
         ),
         (
             "Galactic Tide 1200",
             "energy_1200",
             520,
             1200,
-            20,
-            "Whale-sized stash plus stacks of spins.",
+            1,
+            "Whale-sized stash with a single spin marker.",
         ),
     )
 
@@ -251,11 +267,13 @@ def apply_spin(session, user: User, multiplier: int = 1):
 
     coins_delta = rewards.get("coins", 0)
     energy_delta = rewards.get("energy", 0)
-    wheel_delta = rewards.get("wheel_tokens", 0)
+    wheel_delta = clamp_token_drop(rewards.get("wheel_tokens", 0))
+    if rewards.get("wheel_tokens"):
+        rewards["wheel_tokens"] = wheel_delta
 
     user.coins += coins_delta
     user.energy += energy_delta
-    user.wheel_tokens += wheel_delta
+    award_wheel_token(user, wheel_delta)
     net_coins = coins_delta - coin_cost
     user.total_earned += max(coins_delta, 0)
     user.weekly_coins = max(0, (user.weekly_coins or 0) + net_coins)
@@ -307,12 +325,30 @@ def calc_payout(reels: Sequence[SlotSymbol], mult: int) -> Tuple[Dict[str, int],
         if value
     }
 
-    if sum(adjusted.values()) == 0:
-        label = "Empty Net"
-
+    payouts = {}
     for key in ("coins", "energy", "wheel_tokens"):
-        adjusted.setdefault(key, 0)
-    return adjusted, label
+        base_value = adjusted.get(key, 0)
+        if key == "coins":
+            scalar = Config.SPIN_PAYOUT_COINS_SCALAR
+        elif key == "energy":
+            scalar = Config.SPIN_PAYOUT_ENERGY_SCALAR
+        else:
+            scalar = Config.SPIN_PAYOUT_TOKEN_SCALAR
+        scaled_value = int(base_value * scalar)
+        if key != "coins" and base_value > 0 and scaled_value <= 0:
+            scaled_value = 1
+        if key == "wheel_tokens":
+            payouts[key] = clamp_token_drop(scaled_value)
+        else:
+            payouts[key] = max(scaled_value, 0)
+
+    total_reward = sum(payouts.values())
+    if total_reward > 0 and random.random() < Config.SPIN_BRICK_CHANCE:
+        return {"coins": 0, "energy": 0, "wheel_tokens": 0}, "House Edge"
+
+    if total_reward == 0:
+        label = "Empty Net"
+    return payouts, label
 
 
 # --- Wheel Of Fortune ------------------------------------------------------
@@ -322,14 +358,13 @@ def ensure_default_wheel_rewards(session) -> List[WheelReward]:
     if rewards:
         return rewards
     defaults = [
-        ("250 Coins", "coins", 250, 2.5, "#1de5a0"),
-        ("+1 Spin", "spins", 1, 2.0, "#3dd5ff"),
-        ("Mega 1000", "coins", 1000, 0.6, "#f9c74f"),
-        ("Energy Burst", "energy", 50, 1.8, "#ff6f59"),
-        ("Sticker Pack", "sticker_pack", 1, 2.1, "#c77dff"),
-        ("Jackpot 5000", "coins", 5000, 0.25, "#ff477e"),
-        ("Lucky 100", "coins", 100, 3.2, "#0096c7"),
-        ("+3 Spins", "spins", 3, 0.9, "#9ef01a"),
+        ("House Favor 400", "coins", 400, 3.6, "#1de5a0"),
+        ("Safe Return 900", "coins", 900, 1.4, "#3dd5ff"),
+        ("Sticker Cache", "sticker_pack", 1, 0.7, "#c77dff"),
+        ("Energy Drip", "energy", 8, 0.55, "#ff6f59"),
+        ("Wheel Token", "wheel_tokens", 1, 0.25, "#8b5cf6"),
+        ("Mega Surge 1500", "coins", 1500, 0.42, "#f9c74f"),
+        ("Jackpot 5000", "coins", 5000, 0.12, "#ff477e"),
     ]
     for label, rtype, amount, weight, color in defaults:
         rewards.append(
@@ -357,8 +392,10 @@ def apply_reward(user: User, reward: WheelReward):
         user.energy += reward.amount * Config.ENERGY_PER_SPIN
     elif reward.reward_type == "energy":
         user.energy += reward.amount
+    elif reward.reward_type == "wheel_tokens":
+        award_wheel_token(user, reward.amount)
     elif reward.reward_type == "sticker_pack":
-        user.wheel_tokens += reward.amount
+        award_wheel_token(user, reward.amount)
     else:
         user.coins += reward.amount
 
@@ -374,14 +411,14 @@ def ensure_default_albums(session):
         name="Ocean Legends",
         slug="ocean-legends",
         description="Collect the fiercest predators of the seven seas",
-        reward_spins=3,
+        reward_spins=1,
         sticker_cost=40,
     )
     sky_album = StickerAlbum(
         name="Sky Voyagers",
         slug="sky-voyagers",
         description="Fly with aerial aces to earn extra spins",
-        reward_spins=2,
+        reward_spins=1,
         sticker_cost=30,
     )
 
@@ -455,7 +492,7 @@ def complete_album(session, user: User, album: StickerAlbum):
         return False
     session.add(AlbumCompletion(user_id=user.id, album_id=album.id))
     user.energy += album.reward_spins * Config.ENERGY_PER_SPIN
-    user.wheel_tokens += album.reward_spins
+    award_wheel_token(user, album.reward_spins)
     return True
 
 
@@ -500,7 +537,7 @@ def ensure_signature_events(session) -> List[LiveEvent]:
             "end_at": upcoming + timedelta(days=3),
             "target_spins": 220,
             "reward_type": "wheel_tokens",
-            "reward_amount": 6,
+            "reward_amount": 1,
             "event_type": "seasonal",
             "banner_url": "/static/images/events/turbine-frenzy.svg",
         },
@@ -545,7 +582,7 @@ def record_event_spin(session, user: User, multiplier: int):
                 user.weekly_coins = max(0, (user.weekly_coins or 0) + event.reward_amount)
                 refresh_level(user)
             else:
-                user.wheel_tokens += event.reward_amount
+                award_wheel_token(user, event.reward_amount)
             progress.claimed = True
     session.flush()
 
@@ -557,6 +594,11 @@ def serialize_event(event: LiveEvent, progress: EventProgress | None):
         status = "live"
     elif now > event.end_at:
         status = "ended"
+    reward_amount = (
+        event.reward_amount
+        if event.reward_type != "wheel_tokens"
+        else clamp_token_drop(event.reward_amount)
+    )
     return {
         "slug": event.slug,
         "name": event.name,
@@ -565,7 +607,7 @@ def serialize_event(event: LiveEvent, progress: EventProgress | None):
         "end_at": event.end_at.isoformat(),
         "target_spins": event.target_spins,
         "reward_type": event.reward_type,
-        "reward_amount": event.reward_amount,
+        "reward_amount": reward_amount,
         "event_type": event.event_type,
         "banner_url": event.banner_url,
         "status": status,

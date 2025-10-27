@@ -41,93 +41,107 @@ a {
 .app-shell {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 24px 18px 96px;
+  padding: 18px 18px 96px;
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.slot-header {
-  background: linear-gradient(160deg, rgba(0, 204, 255, 0.22), rgba(98, 17, 179, 0.38)),
-    url('/static/images/header-bg.svg') center/cover no-repeat;
-  border-radius: 32px;
-  padding: 28px 30px 32px;
-  box-shadow: 0 36px 80px rgba(4, 32, 62, 0.55);
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  position: relative;
-  overflow: hidden;
-}
-
-.slot-header::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 12% 20%, rgba(0, 255, 255, 0.25), transparent 55%),
-    radial-gradient(circle at 88% 18%, rgba(255, 122, 158, 0.18), transparent 60%);
-  pointer-events: none;
-}
-
-.brand-lockup {
+.resource-nav {
   display: flex;
   align-items: center;
-  gap: 18px;
-  position: relative;
-  z-index: 1;
-}
-
-.brand-crest {
-  width: 112px;
-  height: auto;
-  filter: drop-shadow(0 16px 35px rgba(0, 255, 255, 0.45));
-}
-
-.brand-copy h1 {
-  font-size: 2.35rem;
-  text-shadow: 0 0 28px rgba(0, 255, 255, 0.65);
-}
-
-.brand-copy p {
-  margin: 8px 0 0;
-  color: rgba(224, 244, 255, 0.92);
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.jackpot-ticker {
-  background: rgba(3, 18, 42, 0.75);
-  border: 1px solid rgba(0, 240, 255, 0.28);
-  border-radius: 999px;
+  gap: 12px;
   padding: 10px 18px;
-  font-size: 0.88rem;
-  letter-spacing: 0.7px;
-  color: rgba(227, 245, 255, 0.9);
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  background: rgba(3, 22, 40, 0.92);
+  position: sticky;
+  top: 12px;
+  z-index: 12;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(4, 18, 38, 0.45);
 }
 
-.jackpot-ticker span {
-  display: inline-block;
-  animation: ticker-glow 8s linear infinite;
+.resource-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: rgba(2, 16, 32, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  box-shadow: inset 0 0 12px rgba(59, 130, 246, 0.18);
 }
 
-@keyframes ticker-glow {
-  0%,
-  100% {
-    text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
-  }
-  50% {
-    text-shadow: 0 0 28px rgba(255, 237, 117, 0.65);
-  }
+.resource-icon {
+  font-size: 1.2rem;
 }
 
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+.resource-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resource-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(190, 228, 255, 0.7);
+}
+
+.resource-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+}
+
+.level-strip {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
   gap: 18px;
-  margin-top: 22px;
+  padding: 16px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  background: rgba(3, 22, 40, 0.85);
+  box-shadow: 0 24px 48px rgba(4, 18, 38, 0.35);
+}
+
+.level-meter,
+.weekly-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.level-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.level-meter .label,
+.weekly-meter .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(202, 232, 255, 0.78);
+}
+
+.level-meter .value,
+.weekly-meter .value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+
+.weekly-meter .caption {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .slot-marquee {
@@ -195,41 +209,43 @@ a {
   }
 }
 
-.stat-card {
+.status-card {
   background: rgba(2, 16, 32, 0.82);
   border-radius: 18px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid rgba(0, 240, 255, 0.18);
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 130px;
+  box-shadow: 0 16px 36px rgba(0, 12, 30, 0.4);
 }
 
-.stat-card .label {
+.status-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.status-card .label {
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 1.4px;
-  color: var(--muted);
+  letter-spacing: 1.2px;
+  color: rgba(202, 232, 255, 0.78);
 }
 
-.stat-card .value {
+.status-card .value {
+  font-family: 'Orbitron', sans-serif;
   font-size: 1.8rem;
-  font-weight: 600;
   color: var(--accent);
 }
 
-.stat-card .caption {
-  font-size: 0.75rem;
+.status-card .caption {
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.6);
-}
-
-.stat-card.highlight {
-  background: linear-gradient(135deg, rgba(255, 196, 72, 0.18), rgba(75, 0, 130, 0.4));
-  border: 1px solid rgba(255, 196, 72, 0.45);
-  box-shadow: 0 16px 36px rgba(255, 196, 72, 0.25);
 }
 
 .progress-wrap {
@@ -633,6 +649,25 @@ progress::-moz-progress-bar {
   gap: 12px;
 }
 
+.event-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.event-card.with-banner {
+  color: #f8fafc;
+  background-size: cover;
+  background-position: center;
+}
+
+.event-card.with-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(1, 9, 22, 0.85), rgba(2, 15, 30, 0.65));
+  z-index: 0;
+}
+
 .event-card::after {
   content: '';
   position: absolute;
@@ -706,6 +741,11 @@ progress::-moz-progress-bar {
   background: linear-gradient(135deg, rgba(244, 114, 182, 0.3), rgba(147, 51, 234, 0.3));
   border: 1px solid rgba(244, 114, 182, 0.4);
   font-size: 0.85rem;
+}
+
+.seasonal-card small {
+  font-size: 0.8rem;
+  color: rgba(226, 241, 255, 0.75);
 }
 
 .seasonal-card img {
@@ -980,6 +1020,11 @@ progress::-moz-progress-bar {
   color: var(--muted);
 }
 
+.shop-meta .token {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
 .shop-card .stars {
   font-weight: 600;
   color: var(--accent-3);
@@ -1069,13 +1114,41 @@ progress::-moz-progress-bar {
     padding: 18px 14px 96px;
   }
 
-  .brand-lockup {
-    flex-direction: column;
-    text-align: center;
+  .resource-nav {
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
-  .brand-crest {
-    width: 88px;
+  .resource-pill {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
+  .level-strip {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .level-meter,
+  .weekly-meter {
+    width: 100%;
+  }
+
+  .weekly-meter .value {
+    font-size: 1.4rem;
+  }
+
+  .event-card {
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .event-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .event-card p {
+    font-size: 0.9rem;
   }
 
   .daily-card {

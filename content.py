@@ -4,19 +4,19 @@ DASHBOARD_FACTS = [
     {
         "id": "main-spin",
         "title": "Main Spin Cab",
-        "body": "Pull the chrome lever to consume energy, roll three reels, and earn SharkCoins, Energy bursts, or Wheel Tokens depending on the neon icons you line up.",
+        "body": "Pull the chrome lever to consume energy, roll three reels, and gamble SharkCoins. Most pulls brick out—only rare ⚡ or 🌀 hits refund resources.",
         "icon": "/static/images/info-spins.svg",
     },
     {
         "id": "daily",
         "title": "Daily Rewards",
-        "body": "Claim your captain's log-in bonus every 24 hours. Streak milestones drop bonus Wheel Tokens and scale the coin/energy yield automatically.",
+        "body": "Claim every 24 hours. Coins scale with streaks, but ⚡ only appears every few days and 🌀 tokens are locked behind long streak milestones.",
         "icon": "/static/images/info-daily.svg",
     },
     {
         "id": "wheel",
         "title": "Wheel of Tides",
-        "body": "Spend Wheel Tokens or free charges to spin the animated tide wheel. Rewards range from burst energy to premium sticker packs.",
+        "body": "Spend Wheel Tokens to spin the tide wheel. Expect mostly coin payouts—energy drips and extra tokens are intentionally scarce.",
         "icon": "/static/images/info-wheel.svg",
     },
     {
@@ -45,11 +45,11 @@ GUIDE_SECTIONS = [
         "entries": [
             {
                 "heading": "Energy Cost",
-                "description": "Each pull costs 1⚡ per multiplier tier. Win backs energy with ⚡ symbols on the reels or via daily rewards.",
+                "description": "Each pull costs 3⚡ per multiplier tier. Only the ⚡ and 🦈 symbols refund energy, so plan streaks carefully.",
             },
             {
                 "heading": "Reward Symbols",
-                "description": "🪙 adds SharkCoins, ⚡ refunds energy, and 🌀 grants Wheel Tokens. Special icons amplify based on double or triple matches.",
+                "description": "🪙 adds SharkCoins, ⚡ refunds a sliver of energy, and 🌀 grants rare Wheel Tokens. Double matches pay 2×, triple matches 3×, but the house cut can still zero a haul.",
             },
             {
                 "heading": "Multipliers",
@@ -79,7 +79,7 @@ GUIDE_SECTIONS = [
             },
             {
                 "heading": "Milestones",
-                "description": "Edit Config.DAILY_MILESTONES to choose which streak days award bonus Wheel Tokens.",
+                "description": "Edit Config.DAILY_MILESTONES to choose which streak days award bonus Wheel Tokens. Energy only appears every fourth claim by default.",
             },
         ],
     },
@@ -88,7 +88,7 @@ GUIDE_SECTIONS = [
         "entries": [
             {
                 "heading": "Star Packs",
-                "description": "Update Config.STAR_PACKAGES to change pricing, energy values, descriptions, or artwork for each bundle.",
+                "description": "Update Config.STAR_PACKAGES or manage live shop items via the admin panel's Star Shop card to change pricing, energy values, descriptions, or artwork.",
             },
             {
                 "heading": "Invoice Links",

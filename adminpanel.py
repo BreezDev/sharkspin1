@@ -16,6 +16,8 @@ from sqlalchemy import func
 
 from config import Config
 from game_logic import (
+    award_wheel_token,
+    clamp_token_drop,
     ensure_default_shop_items,
     ensure_default_slot_symbols,
     ensure_default_wheel_rewards,
@@ -66,7 +68,7 @@ def _serialize_symbol(symbol: SlotSymbol) -> Dict[str, Any]:
         "weight": symbol.weight,
         "coins": symbol.coins,
         "energy": symbol.energy,
-        "wheel_tokens": symbol.wheel_tokens,
+        "wheel_tokens": clamp_token_drop(symbol.wheel_tokens),
         "art_url": symbol.art_url,
         "color": symbol.color,
         "is_enabled": symbol.is_enabled,
@@ -79,7 +81,9 @@ def _serialize_reward(reward: WheelReward) -> Dict[str, Any]:
         "id": reward.id,
         "label": reward.label,
         "reward_type": reward.reward_type,
-        "amount": reward.amount,
+        "amount": clamp_token_drop(reward.amount)
+        if reward.reward_type == "wheel_tokens"
+        else reward.amount,
         "weight": reward.weight,
         "color": reward.color,
     }
@@ -96,7 +100,9 @@ def _serialize_event(event: LiveEvent) -> Dict[str, Any]:
         "end_at": event.end_at.isoformat(),
         "target_spins": event.target_spins,
         "reward_type": event.reward_type,
-        "reward_amount": event.reward_amount,
+        "reward_amount": clamp_token_drop(event.reward_amount)
+        if event.reward_type == "wheel_tokens"
+        else event.reward_amount,
         "banner_url": event.banner_url,
     }
 
@@ -108,7 +114,7 @@ def _serialize_shop_item(item: ShopItem) -> Dict[str, Any]:
         "name": item.name,
         "stars": item.stars,
         "energy": item.energy,
-        "bonus_spins": item.bonus_spins,
+        "bonus_spins": clamp_token_drop(item.bonus_spins),
         "description": item.description,
         "art_url": item.art_url,
         "is_active": item.is_active,
@@ -223,7 +229,13 @@ def admin_save_symbol():
                 setattr(symbol, field, data[field])
         for field in ["coins", "energy", "wheel_tokens", "weight", "sort_order"]:
             if field in data and data[field] is not None:
-                setattr(symbol, field, float(data[field]) if field == "weight" else int(data[field]))
+                if field == "weight":
+                    value = float(data[field])
+                else:
+                    value = int(data[field])
+                if field == "wheel_tokens":
+                    value = clamp_token_drop(value)
+                setattr(symbol, field, value)
         if "is_enabled" in data:
             symbol.is_enabled = bool(data["is_enabled"])
 
@@ -264,6 +276,8 @@ def admin_save_wheel_reward():
             reward.amount = int(data["amount"])
         if "weight" in data:
             reward.weight = float(data["weight"])
+        if reward.reward_type == "wheel_tokens":
+            reward.amount = clamp_token_drop(reward.amount)
 
         session.commit()
         return jsonify({"ok": True, "reward": _serialize_reward(reward)})
@@ -310,6 +324,8 @@ def admin_save_event():
             event.start_at = datetime.fromisoformat(data["start_at"])
         if "end_at" in data:
             event.end_at = datetime.fromisoformat(data["end_at"])
+        if event.reward_type == "wheel_tokens":
+            event.reward_amount = clamp_token_drop(event.reward_amount)
 
         session.commit()
         return jsonify({"ok": True, "event": _serialize_event(event)})
@@ -346,7 +362,10 @@ def admin_save_shop_item():
                 setattr(item, field, data[field])
         for field in ["stars", "energy", "bonus_spins", "sort_order"]:
             if field in data and data[field] is not None:
-                setattr(item, field, int(data[field]))
+                value = int(data[field])
+                if field == "bonus_spins":
+                    value = clamp_token_drop(value)
+                setattr(item, field, value)
         if "is_active" in data:
             item.is_active = bool(data["is_active"])
 
@@ -465,7 +484,9 @@ def admin_reward_leaderboard():
             elif reward_type == "spins":
                 user.energy += amount * Config.ENERGY_PER_SPIN
             elif reward_type == "wheel_tokens":
-                user.wheel_tokens += amount
+                token_award = clamp_token_drop(amount)
+                if token_award:
+                    award_wheel_token(user, token_award)
 
         session.commit()
 

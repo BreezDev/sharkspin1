@@ -5,38 +5,38 @@ Welcome to the SharkSpin command deck! This guide walks you through every surfac
 ## Launching the Mini App
 
 1. Open the SharkSpin bot in Telegram and tap **Open SharkSpin** (available via `/start`, `/me`, or `/buy`).
-2. The command deck loads with a hero banner showing your live **Level**, **SharkCoins**, **Energy**, and **Wheel Tokens**.
+2. The command deck loads with a compact resource bar and level strip pinned to the top that tracks your **SharkCoins**, **Energy**, **Wheel Spins**, and current XP progress.
 3. Use the fixed taskbar at the bottom to jump between **Main Spin**, **Wheel of Tides**, **Albums**, **Shop**, and **Help**.
 
 ## Daily Captain’s Log
 
 * The gold chest card beneath the hero banner displays your streak status and the next reward preview.
 * Claim once every 24 hours to keep the streak alive. Missing more than 48 hours resets it.
-* Streak milestones (configured for days like 1, 3, 5, 7, 14, 21…) add bonus Wheel Tokens on top of coins and energy.
+* Wheel Tokens only appear on long streak milestones (7, 14, 21…) and always arrive as a single token; energy trickles in every fourth claim—plan around the drought.
 * The claim button is disabled while you are on cooldown and shows a countdown instead.
 
 ## Main Spin Bay
 
-* Pick a multiplier chip (x1–x5) to set your wager. Higher multipliers cost more energy but scale the payout.
+* Pick a multiplier chip (x1, x2, x5, … up to x1500) to set your wager. Higher multipliers multiply the 3⚡ / 75🪙 cost along with potential payouts.
 * Tap **Spin the Main Cab** to fire the reels. Icons award resources:
-  * **🪙 SharkCoins** – spend these on sticker packs or to show off your earnings.
-  * **⚡ Energy** – refills the spin meter so you can keep playing.
-  * **🌀 Wheel Tokens** – grants attempts on the Wheel of Tides.
-  * **💠 / 🎁 / 🦈** – premium symbols that enhance coin and hybrid payouts.
-* Double matches multiply rewards 2×, triple matches 3×, and shark resonances add 1.5× flair.
-* The result banner summarizes exactly what you won (coins, energy, tokens) plus the spin label.
-* The level progress bar updates immediately with XP earned from your winnings.
+  * **🪙 SharkCoins** – expect most spins to lose net coins; only rare streaks beat the house edge.
+  * **⚡ Energy** – refunded only by the ⚡ and 🦈 symbols.
+* **🌀 Wheel Tokens** – granted by the 🌀 or 🦈 symbols, tuned to be rarer than energy, and always limited to a single token per spin.
+  * **💠 / 🎁** – premium symbols that amplify coin returns but still respect the house cut.
+* Double matches multiply base rewards 2×, triple matches 3×, and shark resonances add 1.5× flair before the house edge reductions apply.
+* The result banner summarizes the wager, the resources returned, and your coin net.
+* The level progress bar updates immediately with XP earned from whatever coins you actually bank.
 
 ## Wheel of Tides
 
-* Spend a Wheel Token or use your free cooldown spin to activate the neon wheel.
+* Spend exactly one Wheel Token to activate the neon wheel (no more free cooldown spins by default).
 * The glowing frame and center badge update automatically as you edit wheel art assets.
-* Rewards include coin bursts, energy storms, extra spins, and sticker packs—check the colored slice labels.
+* Rewards skew toward coin bursts. Energy drips and bonus tokens are intentionally rare—tweak slice weights from the admin panel if needed.
 * Wheel results apply instantly to your balance.
 
 ## Sticker Albums
 
-* Each album card shows cost per pack, completion percentage, and rewards for finishing the set.
+* Each album card shows cost per pack, completion percentage, and the single Wheel Token reward for finishing the set.
 * Tap **Open Pack** to spend SharkCoins and reveal a random sticker from that album.
 * Duplicate stickers stay in your inventory; completing the set auto-grants bonus spins and energy.
 * Album lists refresh after every pack so you can see progress at a glance.
@@ -44,9 +44,9 @@ Welcome to the SharkSpin command deck! This guide walks you through every surfac
 ## Star Shop
 
 * The shop tab lists curated Telegram Star bundles configured by the admins.
-* Each card shows the art badge, Stars price, energy payload, and bonus Wheel Tokens.
+* Each card shows the art badge, Stars price, energy payload, and whether a rare +1 Wheel Token is included.
 * Tap **Purchase in-app** to open the Telegram Stars payment sheet without leaving SharkSpin.
-* After payment completes, the bot credits energy and tokens automatically and your stats refresh.
+* After payment completes, the bot credits energy and (if applicable) the single Wheel Token automatically and your stats refresh. Admins can add or retire bundles live from `/admin/shop`.
 
 ## Help & Operations Briefing
 

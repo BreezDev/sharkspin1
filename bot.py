@@ -14,6 +14,7 @@ from itsdangerous import URLSafeSerializer
 
 from config import Config
 from models import Base, Payment, RewardLink, User
+from game_logic import clamp_token_drop, award_wheel_token
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("sharkspin.bot")
@@ -207,9 +208,9 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
             pack = Config.STAR_PACKAGES[0]
         # Credit energy
         u.energy += pack["energy"]
-        bonus_spins = pack.get("bonus_spins", 0)
+        bonus_spins = clamp_token_drop(pack.get("bonus_spins", 0))
         if bonus_spins:
-            u.wheel_tokens += bonus_spins
+            award_wheel_token(u, bonus_spins)
         # Record payment
         p = Payment(
             tg_payment_charge_id=sp.telegram_payment_charge_id,
@@ -219,8 +220,9 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         s.add(p)
         s.commit()
+    token_line = " & Wheel Token +1" if bonus_spins else ""
     await update.message.reply_text(
-        f"✅ Payment received: {stars_paid} ⭐️\nEnergy +{pack['energy']} & Wheel Tokens +{bonus_spins}. Enjoy spinning!"
+        f"✅ Payment received: {stars_paid} ⭐️\nEnergy +{pack['energy']}{token_line}. Enjoy spinning!"
     )
 
 
