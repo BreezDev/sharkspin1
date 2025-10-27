@@ -28,6 +28,8 @@ from models import (
 )
 from game_logic import (
     apply_spin,
+    award_wheel_token,
+    clamp_token_drop,
     complete_album,
     ensure_default_albums,
     ensure_default_shop_items,
@@ -106,6 +108,7 @@ def serialize_daily_state(state: DailyRewardState) -> Dict[str, Any]:
     now = datetime.utcnow()
     next_streak = state.streak + 1
     reward_preview = _daily_reward_values(next_streak)
+    reward_preview["wheel_tokens"] = clamp_token_drop(reward_preview.get("wheel_tokens", 0))
     if state.last_claim_at is None:
         can_claim = True
         seconds_until = 0
@@ -138,7 +141,7 @@ def _find_package(package_id: str | None) -> Optional[Dict[str, Any]]:
             "name": item.name,
             "stars": item.stars,
             "energy": item.energy,
-            "bonus_spins": item.bonus_spins,
+            "bonus_spins": clamp_token_drop(item.bonus_spins),
             "description": item.description,
             "art_url": item.art_url,
         }
@@ -242,7 +245,7 @@ def redeem_reward(token):
         elif rl.reward_type == "spins":
             user.energy += rl.amount * Config.ENERGY_PER_SPIN
         elif rl.reward_type == "wheel_tokens":
-            user.wheel_tokens += rl.amount
+            award_wheel_token(user, rl.amount)
         elif rl.reward_type == "sticker_pack":
             ensure_default_albums(s)
             albums = (
@@ -280,7 +283,7 @@ def redeem_reward(token):
             "coins": f"{rl.amount} SharkCoins 🪙",
             "energy": f"{rl.amount} Energy ⚡",
             "spins": f"{rl.amount} Free Spins 🎰",
-            "wheel_tokens": f"{rl.amount} Wheel Tokens 🌀",
+            "wheel_tokens": "1 Wheel Token 🌀" if clamp_token_drop(rl.amount) else "No Wheel Tokens",
             "sticker_pack": f"{rl.amount} Sticker Packs 📔",
         }
         reward_text = reward_text_map.get(rl.reward_type, f"{rl.amount} {rl.reward_type}")
@@ -427,7 +430,10 @@ def api_daily_claim():
         reward = _daily_reward_values(state.streak + 1)
         user.coins += reward.get("coins", 0)
         user.energy += reward.get("energy", 0)
-        user.wheel_tokens += reward.get("wheel_tokens", 0)
+        token_award = clamp_token_drop(reward.get("wheel_tokens", 0))
+        if token_award:
+            award_wheel_token(user, token_award)
+        reward["wheel_tokens"] = token_award
         if reward.get("coins"):
             user.total_earned += reward.get("coins", 0)
             user.weekly_coins = max(0, (user.weekly_coins or 0) + reward.get("coins", 0))
@@ -465,7 +471,7 @@ def api_shop():
                 "name": item.name,
                 "stars": item.stars,
                 "energy": item.energy,
-                "bonus_spins": item.bonus_spins,
+                "bonus_spins": clamp_token_drop(item.bonus_spins),
                 "description": item.description,
                 "art_url": item.art_url,
             }
@@ -503,7 +509,7 @@ def api_shop_order():
             "name": package["name"],
             "stars": package["stars"],
             "energy": package["energy"],
-            "bonus_spins": package.get("bonus_spins", 0),
+            "bonus_spins": clamp_token_drop(package.get("bonus_spins", 0)),
         },
         "invoice_url": invoice_url,
         "fallback_url": fallback,

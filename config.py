@@ -22,9 +22,9 @@ class Config:
 
     # Game economy
     STARTING_COINS = int(os.getenv("STARTING_COINS", 250))
-    STARTING_ENERGY = int(os.getenv("STARTING_ENERGY", 250))
-    ENERGY_PER_SPIN = int(os.getenv("ENERGY_PER_SPIN", 1))
-    COIN_COST_PER_SPIN = int(os.getenv("COIN_COST_PER_SPIN", 50))
+    STARTING_ENERGY = int(os.getenv("STARTING_ENERGY", 5))
+    ENERGY_PER_SPIN = int(os.getenv("ENERGY_PER_SPIN", 3))
+    COIN_COST_PER_SPIN = int(os.getenv("COIN_COST_PER_SPIN", 75))
     SPIN_COOLDOWN_MS = int(os.getenv("SPIN_COOLDOWN_MS", 900))
     SPIN_MULTIPLIER_PRESETS = [
         int(x)
@@ -34,8 +34,8 @@ class Config:
         ).split(",")
     ]
 
-    DAILY_REWARD_BASE_COINS = int(os.getenv("DAILY_REWARD_BASE_COINS", 250))
-    DAILY_REWARD_BASE_ENERGY = int(os.getenv("DAILY_REWARD_BASE_ENERGY", 20))
+    DAILY_REWARD_BASE_COINS = int(os.getenv("DAILY_REWARD_BASE_COINS", 120))
+    DAILY_REWARD_BASE_ENERGY = int(os.getenv("DAILY_REWARD_BASE_ENERGY", 1))
     DAILY_STREAK_BONUS = int(os.getenv("DAILY_STREAK_BONUS", 40))
     DAILY_MILESTONES = [int(x) for x in os.getenv("DAILY_MILESTONES", "7,14,21,28").split(",")]  # claim days to showcase
 
@@ -67,10 +67,10 @@ class Config:
     LEADERBOARD_SIZE = int(os.getenv("LEADERBOARD_SIZE", 50))
 
     # Spin balancing
-    SPIN_PAYOUT_COINS_SCALAR = float(os.getenv("SPIN_PAYOUT_COINS_SCALAR", 0.40))
-    SPIN_PAYOUT_ENERGY_SCALAR = float(os.getenv("SPIN_PAYOUT_ENERGY_SCALAR", 0.05))
-    SPIN_PAYOUT_TOKEN_SCALAR = float(os.getenv("SPIN_PAYOUT_TOKEN_SCALAR", 0.01))
-    SPIN_BRICK_CHANCE = float(os.getenv("SPIN_BRICK_CHANCE", 0.01))
+    SPIN_PAYOUT_COINS_SCALAR = float(os.getenv("SPIN_PAYOUT_COINS_SCALAR", 0.45))
+    SPIN_PAYOUT_ENERGY_SCALAR = float(os.getenv("SPIN_PAYOUT_ENERGY_SCALAR", 0.2))
+    SPIN_PAYOUT_TOKEN_SCALAR = float(os.getenv("SPIN_PAYOUT_TOKEN_SCALAR", 0.08))
+    SPIN_BRICK_CHANCE = float(os.getenv("SPIN_BRICK_CHANCE", 0.32))
 
     # Payments (Stars / XTR)
     STAR_PACKAGES = [
@@ -79,7 +79,7 @@ class Config:
             "name": "+100 Energy",
             "stars": int(os.getenv("STAR_PACK_1_STARS", 50)),
             "energy": int(os.getenv("STAR_PACK_1_ENERGY", 100)),
-            "bonus_spins": 1,
+            "bonus_spins": 0,
             "description": "Starter burst to keep the reels humming.",
             "art_url": "/static/images/star-pack-coral.svg",
         },
@@ -88,7 +88,7 @@ class Config:
             "name": "+250 Energy",
             "stars": int(os.getenv("STAR_PACK_2_STARS", 120)),
             "energy": int(os.getenv("STAR_PACK_2_ENERGY", 250)),
-            "bonus_spins": 3,
+            "bonus_spins": 0,
             "description": "Big energy dive plus bonus Wheel Tokens.",
             "art_url": "/static/images/star-pack-abyss.svg",
         },
@@ -97,7 +97,7 @@ class Config:
             "name": "+600 Energy",
             "stars": int(os.getenv("STAR_PACK_3_STARS", 260)),
             "energy": int(os.getenv("STAR_PACK_3_ENERGY", 600)),
-            "bonus_spins": 8,
+            "bonus_spins": 1,
             "description": "Legendary boost with neon wheel fireworks.",
             "art_url": "/static/images/star-pack-mega.svg",
         },
@@ -106,7 +106,7 @@ class Config:
             "name": "+1200 Energy",
             "stars": int(os.getenv("STAR_PACK_4_STARS", 520)),
             "energy": int(os.getenv("STAR_PACK_4_ENERGY", 1200)),
-            "bonus_spins": 20,
+            "bonus_spins": 1,
             "description": "Whale-sized stash plus stacks of spins.",
             "art_url": "/static/images/star-pack-galaxy.svg",
         },
@@ -115,7 +115,7 @@ class Config:
             "name": "+2500 Energy",
             "stars": int(os.getenv("STAR_PACK_5_STARS", 980)),
             "energy": int(os.getenv("STAR_PACK_5_ENERGY", 2500)),
-            "bonus_spins": 45,
+            "bonus_spins": 1,
             "description": "Ultimate marathon kit for leaderboard runs.",
             "art_url": "/static/images/star-pack-titan.svg",
         },
@@ -124,7 +124,7 @@ class Config:
             "name": "+4200 Energy",
             "stars": int(os.getenv("STAR_PACK_6_STARS", 1600)),
             "energy": int(os.getenv("STAR_PACK_6_ENERGY", 4200)),
-            "bonus_spins": 85,
+            "bonus_spins": 1,
             "description": "Festival bundle with radiant sticker showers and mega spins.",
             "art_url": "/static/images/star-pack-lumina.svg",
         },
@@ -133,7 +133,7 @@ class Config:
             "name": "Orbital Riptide 7200",
             "stars": int(os.getenv("STAR_PACK_7_STARS", 2800)),
             "energy": int(os.getenv("STAR_PACK_7_ENERGY", 7200)),
-            "bonus_spins": 160,
+            "bonus_spins": 1,
             "description": "Championship-grade hoard with cosmic wheel tokens for squads.",
             "art_url": "/static/images/star-pack-orbit.svg",
         },

@@ -11,7 +11,7 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 | Albums & sticker packs | `/admin/albums` + `/admin/stickers` APIs | Seed defaults via `ensure_default_albums` or curate directly from the admin panel. |
 | Live + seasonal events & rewards | `/admin/events` | Create, edit, or retire entries. The helper `ensure_signature_events` (game_logic.py) seeds the three showcase events and banner art. |
 | Wheel of Tides slices & odds | `/admin/wheel` | Edit label, reward type/amount, slice color, and `weight` (higher = more common) to reshape the wheel. |
-| Star Shop catalog | `/admin/shop` | Add/remove in-app purchases, toggle availability, or retheme art and descriptions without redeploying. |
+| Star Shop catalog | `/admin/shop` | Add/remove in-app purchases, toggle availability, or retheme art and descriptions without redeploying. Bonus spin inputs clamp to either 0 or +1 Wheel Token. |
 | Reward links & broadcast messages | `/admin/rewards`, `/admin/broadcasts` | Generate redeemable links, inspect redemptions, or send Telegram broadcasts with reward URLs. |
 | Leaderboard weekly payouts | `/admin/leaderboard` | Issue SharkCoin/energy rewards to the top captains from the dashboard. |
 
@@ -57,6 +57,7 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 
 * Rewards live in the `wheel_rewards` table. Update via SQL or adjust defaults in `ensure_default_wheel_rewards` inside `game_logic.py`.
 * The admin dashboard exposes a **Wheel Rewards** form (`/admin/wheel`). Edit label, reward type, amount, color, and `weight` (probability weight) to rebalance slices on the fly.
+* Wheel token slice amounts are auto-capped to a single token—entering larger numbers will still publish as 1.
 * Cooldown + token costs come from `Config.WHEEL_COOLDOWN_HOURS`, `Config.DAILY_FREE_WHEEL_SPINS`, and `Config.WHEEL_TOKEN_COST`.
 * Wheel art layers sit in `static/images/wheel-glow.svg`, `wheel-frame.svg`, and `wheel-center.svg`. Replace those files with identically named assets to reskin the wheel.
 
@@ -81,6 +82,7 @@ Welcome aboard, captain. This document maps every switch you can flip inside the
 * Live bundles can also be created or retired from the **Star Shop** card in `/admin/shop`. Toggle `is_active` to soft-delete offers without code changes.
 * Assets referenced by `art_url` live in `static/images/` (e.g., `star-pack-coral.svg`). Replace or add SVGs there for new bundle art.
 * The web app calls `/api/shop` for catalog data and `/api/shop/order` to create Telegram Stars invoices through `createInvoiceLink`.
+* Bonus spin fields in the admin panel and API are sanitized to 0 or +1 so wheel tokens stay rare.
 * Ensure `TELEGRAM_BOT_TOKEN` and `BOT_USERNAME` are configured so `_build_invoice_link` in `app.py` can reach Telegram.
 * Payments are still acknowledged through `successful_payment` in `bot.py`. Keep the bot running to grant energy/tokens after Stars payments complete.
 

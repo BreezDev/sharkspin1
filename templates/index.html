@@ -32,37 +32,23 @@
         </div>
       </div>
     </nav>
-    <header class="slot-header">
-      <div class="brand-lockup">
-        <img src="/static/images/hero-boinkers.svg" alt="SharkSpin crest" class="brand-crest" />
-        <div class="brand-copy">
-          <h1>SharkSpin Neon Bay</h1>
-          <p>High-voltage reels, oceanic jackpots, and a leaderboard lit by SharkCoins.</p>
+    <section class="level-strip">
+      <div class="level-meter">
+        <div class="level-head">
+          <span class="label">Level</span>
+          <span class="value" id="level">1</span>
+        </div>
+        <div class="progress-wrap">
+          <progress id="levelProgress" max="100" value="0"></progress>
+          <small id="progressDetail">0 / 0 XP</small>
         </div>
       </div>
-      <div class="jackpot-ticker">
-        <span>🌊 Mega Pot: 1,250,000🪙 • ⚡ Energy Rush every 6h • 🌀 Turbo Frenzy weekend unlocks Friday</span>
+      <div class="weekly-meter">
+        <span class="label">Weekly SharkCoins</span>
+        <span class="value" id="weeklyCoins">0</span>
+        <small class="caption">Leaderboard resets Monday 00:00 UTC</small>
       </div>
-      <div class="status-grid">
-        <div class="status-card">
-          <div class="status-header">
-            <span class="label">Level</span>
-            <span class="value" id="level">1</span>
-          </div>
-          <div class="progress-wrap">
-            <progress id="levelProgress" max="100" value="0"></progress>
-            <small id="progressDetail">0 / 0 XP</small>
-          </div>
-        </div>
-        <div class="status-card">
-          <div class="status-header">
-            <span class="label">Weekly SharkCoins</span>
-            <span class="value" id="weeklyCoins">0</span>
-          </div>
-          <small class="caption">Leaderboard resets Monday 00:00 UTC</small>
-        </div>
-      </div>
-    </header>
+    </section>
 
     <main class="content">
       <section class="view active" data-view="main">

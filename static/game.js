@@ -349,18 +349,31 @@ function renderEvents(events = []) {
     const card = document.createElement('div');
     card.className = 'event-card';
     if (event.banner_url) {
+      card.classList.add('with-banner');
       card.style.backgroundImage = `url(${event.banner_url})`;
-      card.style.backgroundSize = 'cover';
-      card.style.backgroundPosition = 'center';
-      card.style.color = '#f8fafc';
     }
     const progressValue = Math.min(event.progress ?? 0, event.target_spins || 1);
     const progressPct = Math.min(100, Math.round((progressValue / Math.max(event.target_spins || 1, 1)) * 100));
+    const rewardText = (() => {
+      if (event.reward_type === 'wheel_tokens') {
+        return event.reward_amount ? '1 Wheel Token' : 'No Wheel Token';
+      }
+      if (event.reward_type === 'coins') {
+        return `${formatNumber(event.reward_amount)}🪙`;
+      }
+      if (event.reward_type === 'energy') {
+        return `${formatNumber(event.reward_amount)}⚡`;
+      }
+      if (event.reward_type === 'spins') {
+        return `${formatNumber(event.reward_amount)} Spin Energy`;
+      }
+      return `${event.reward_amount} ${event.reward_type}`;
+    })();
     card.innerHTML = `
       <div class="status">${event.event_type?.toUpperCase() || 'LIVE'} • ${event.status.toUpperCase()}</div>
       <h3>${event.name}</h3>
       <p>${event.description}</p>
-      <div class="reward">Reward: ${event.reward_amount} ${event.reward_type}</div>
+      <div class="reward">Reward: ${rewardText}</div>
       <progress value="${progressValue}" max="${event.target_spins}"></progress>
       <div class="progress-line">${progressPct}% • ${progressValue}/${event.target_spins} spins</div>
     `;
@@ -383,7 +396,9 @@ function renderSeasonalEvents(events = []) {
   const container = document.getElementById('seasonalEvents');
   if (!container) return;
   container.innerHTML = '';
-  const featured = events.slice(0, 3);
+  const featured = events
+    .filter((event) => (event.event_type || '').toLowerCase() === 'seasonal')
+    .slice(0, 3);
   if (!featured.length) {
     container.innerHTML = '<p>Spin to unlock seasonal showcases.</p>';
     return;
@@ -391,10 +406,26 @@ function renderSeasonalEvents(events = []) {
   featured.forEach((event) => {
     const card = document.createElement('div');
     card.className = 'seasonal-card';
+    const rewardLine = (() => {
+      if (event.reward_type === 'wheel_tokens') {
+        return event.reward_amount ? 'Reward: 1 Wheel Token' : 'Reward: None';
+      }
+      if (event.reward_type === 'coins') {
+        return `Reward: ${formatNumber(event.reward_amount)}🪙`;
+      }
+      if (event.reward_type === 'energy') {
+        return `Reward: ${formatNumber(event.reward_amount)}⚡`;
+      }
+      if (event.reward_type === 'spins') {
+        return `Reward: ${formatNumber(event.reward_amount)} Spin Energy`;
+      }
+      return '';
+    })();
     card.innerHTML = `
       <span class="tag">${event.event_type || 'live'}</span>
       <h3>${event.name}</h3>
       <p>${event.description}</p>
+      ${rewardLine ? `<small>${rewardLine}</small>` : ''}
       <button class="cta">Jump In →</button>
     `;
     const art = document.createElement('img');
@@ -420,6 +451,21 @@ function renderEventsBoard(events = []) {
     const endDate = new Date(event.end_at).toLocaleString();
     const progressValue = Math.min(event.progress ?? 0, event.target_spins || 1);
     const progressPct = Math.min(100, Math.round((progressValue / Math.max(event.target_spins || 1, 1)) * 100));
+    const rewardText = (() => {
+      if (event.reward_type === 'wheel_tokens') {
+        return event.reward_amount ? '1 Wheel Token' : 'No Wheel Token';
+      }
+      if (event.reward_type === 'coins') {
+        return `${formatNumber(event.reward_amount)}🪙`;
+      }
+      if (event.reward_type === 'energy') {
+        return `${formatNumber(event.reward_amount)}⚡`;
+      }
+      if (event.reward_type === 'spins') {
+        return `${formatNumber(event.reward_amount)} Spin Energy`;
+      }
+      return `${event.reward_amount} ${event.reward_type}`;
+    })();
     sheet.innerHTML = `
       <header>
         <div>
@@ -429,7 +475,7 @@ function renderEventsBoard(events = []) {
         <span class="badge">${event.status.toUpperCase()}</span>
       </header>
       <p>${event.description}</p>
-      <div>Reward: ${event.reward_amount} ${event.reward_type}</div>
+      <div>Reward: ${rewardText}</div>
       <progress value="${progressValue}" max="${event.target_spins}"></progress>
       <div>${progressPct}% complete • ${progressValue}/${event.target_spins} spins</div>
     `;
@@ -500,7 +546,11 @@ function renderAlbums(albums = []) {
     const card = document.createElement('div');
     card.className = 'album-card';
     const progressPct = Math.round((album.owned_count / album.total) * 100);
-    const rewardTag = album.reward_claimed ? '<span class="claimed">Reward claimed</span>' : `<span>${album.reward_spins} bonus spins</span>`;
+    const rewardTag = album.reward_claimed
+      ? '<span class="claimed">Reward claimed</span>'
+      : album.reward_spins
+          ? '<span>Wheel Token reward</span>'
+          : '<span>No wheel token</span>';
     const stickerTiles = album.stickers
       .map((sticker) => `
         <div class="sticker-tile">
@@ -571,7 +621,7 @@ function renderDaily(daily) {
   summary.textContent = daily.can_claim
     ? `Streak ${formatNumber(daily.streak || 0)}. Claim now for ${formatNumber(reward.coins || 0)}🪙, ${formatNumber(reward.energy || 0)}⚡.`
     : `Next reward in ${formatCountdown(daily.seconds_until)}.`;
-  details.textContent = `Next bonus: ${formatNumber(reward.coins || 0)}🪙 • ${formatNumber(reward.energy || 0)}⚡${reward.wheel_tokens ? ` • +${formatNumber(reward.wheel_tokens)}🌀` : ''}`;
+  details.textContent = `Next bonus: ${formatNumber(reward.coins || 0)}🪙 • ${formatNumber(reward.energy || 0)}⚡${reward.wheel_tokens ? ' • +1🌀' : ''}`;
   button.disabled = !daily.can_claim;
   button.textContent = daily.can_claim ? 'Claim Reward' : 'Cooldown';
 }
@@ -601,7 +651,8 @@ async function claimDaily() {
   }
   updateStats(res);
   const reward = res.reward || {};
-  alert(`Reward claimed! +${formatNumber(reward.coins || 0)}🪙, +${formatNumber(reward.energy || 0)}⚡${reward.wheel_tokens ? `, +${formatNumber(reward.wheel_tokens)}🌀` : ''}`);
+  const tokenPart = reward.wheel_tokens ? ', +1🌀' : '';
+  alert(`Reward claimed! +${formatNumber(reward.coins || 0)}🪙, +${formatNumber(reward.energy || 0)}⚡${tokenPart}`);
 }
 
 function renderShop(packages = []) {
@@ -615,12 +666,13 @@ function renderShop(packages = []) {
   packages.forEach((pack) => {
     const card = document.createElement('div');
     card.className = 'shop-card';
+    const tokenMeta = pack.bonus_spins ? '+1🌀' : 'No token';
     card.innerHTML = `
       <header>
         <img src="${pack.art_url || '/static/images/star-pack-coral.svg'}" alt="${pack.name}" />
         <div>
           <h3>${pack.name}</h3>
-          <div class="shop-meta"><span class="stars">${pack.stars}⭐</span> <span>${pack.energy}⚡</span> <span>${pack.bonus_spins}🌀</span></div>
+          <div class="shop-meta"><span class="stars">${pack.stars}⭐</span> <span>${pack.energy}⚡</span> <span class="token">${tokenMeta}</span></div>
         </div>
       </header>
       <p>${pack.description || ''}</p>
