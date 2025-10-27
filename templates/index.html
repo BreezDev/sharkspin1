@@ -9,6 +9,29 @@
 </head>
 <body>
   <div class="app-shell">
+    <nav class="resource-nav">
+      <div class="resource-pill">
+        <span class="resource-icon">🪙</span>
+        <div class="resource-copy">
+          <span class="resource-label">SharkCoins</span>
+          <span class="resource-value" id="coins">0</span>
+        </div>
+      </div>
+      <div class="resource-pill">
+        <span class="resource-icon">⚡</span>
+        <div class="resource-copy">
+          <span class="resource-label">Energy</span>
+          <span class="resource-value" id="energy">0</span>
+        </div>
+      </div>
+      <div class="resource-pill">
+        <span class="resource-icon">🌀</span>
+        <div class="resource-copy">
+          <span class="resource-label">Wheel Spins</span>
+          <span class="resource-value" id="wheelTokens">0</span>
+        </div>
+      </div>
+    </nav>
     <header class="slot-header">
       <div class="brand-lockup">
         <img src="/static/images/hero-boinkers.svg" alt="SharkSpin crest" class="brand-crest" />
@@ -20,32 +43,22 @@
       <div class="jackpot-ticker">
         <span>🌊 Mega Pot: 1,250,000🪙 • ⚡ Energy Rush every 6h • 🌀 Turbo Frenzy weekend unlocks Friday</span>
       </div>
-      <div class="stats-row">
-        <div class="stat-card highlight">
-          <span class="label">SharkCoins</span>
-          <span class="value" id="coins">0</span>
-          <small class="caption">Primary currency for wagers & shop pulls</small>
-        </div>
-        <div class="stat-card">
-          <span class="label">Energy</span>
-          <span class="value" id="energy">0</span>
-          <small class="caption">Spend to unlock high-voltage spins</small>
-        </div>
-        <div class="stat-card">
-          <span class="label">Wheel Tokens</span>
-          <span class="value" id="wheelTokens">0</span>
-        </div>
-        <div class="stat-card">
-          <span class="label">Level</span>
-          <span class="value" id="level">1</span>
+      <div class="status-grid">
+        <div class="status-card">
+          <div class="status-header">
+            <span class="label">Level</span>
+            <span class="value" id="level">1</span>
+          </div>
           <div class="progress-wrap">
             <progress id="levelProgress" max="100" value="0"></progress>
             <small id="progressDetail">0 / 0 XP</small>
           </div>
         </div>
-        <div class="stat-card">
-          <span class="label">Weekly SharkCoins</span>
-          <span class="value" id="weeklyCoins">0</span>
+        <div class="status-card">
+          <div class="status-header">
+            <span class="label">Weekly SharkCoins</span>
+            <span class="value" id="weeklyCoins">0</span>
+          </div>
           <small class="caption">Leaderboard resets Monday 00:00 UTC</small>
         </div>
       </div>

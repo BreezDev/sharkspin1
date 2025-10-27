@@ -21,26 +21,26 @@ class Config:
     ADMIN_SECRET = os.getenv("ADMIN_SECRET", "super-shark-admin")
 
     # Game economy
-    STARTING_COINS = int(os.getenv("STARTING_COINS", 100))
-    STARTING_ENERGY = int(os.getenv("STARTING_ENERGY", 30))
-    ENERGY_PER_SPIN = int(os.getenv("ENERGY_PER_SPIN", 1))
-    COIN_COST_PER_SPIN = int(os.getenv("COIN_COST_PER_SPIN", 25))
+    STARTING_COINS = int(os.getenv("STARTING_COINS", 250))
+    STARTING_ENERGY = int(os.getenv("STARTING_ENERGY", 5))
+    ENERGY_PER_SPIN = int(os.getenv("ENERGY_PER_SPIN", 3))
+    COIN_COST_PER_SPIN = int(os.getenv("COIN_COST_PER_SPIN", 75))
     SPIN_COOLDOWN_MS = int(os.getenv("SPIN_COOLDOWN_MS", 900))
     SPIN_MULTIPLIER_PRESETS = [
         int(x)
         for x in os.getenv(
             "SPIN_MULTIPLIER_PRESETS",
-            "1,5,10,25,50,100,150,250,500,700,1000,2000,5000,10000,20000,50000,100000",
+            "1,2,5,10,20,50,100,250,500,750,1000,1500",
         ).split(",")
     ]
 
-    DAILY_REWARD_BASE_COINS = int(os.getenv("DAILY_REWARD_BASE_COINS", 200))
-    DAILY_REWARD_BASE_ENERGY = int(os.getenv("DAILY_REWARD_BASE_ENERGY", 6))
-    DAILY_STREAK_BONUS = int(os.getenv("DAILY_STREAK_BONUS", 25))
-    DAILY_MILESTONES = [int(x) for x in os.getenv("DAILY_MILESTONES", "1,3,5,7,14,21").split(",")]  # claim days to showcase
+    DAILY_REWARD_BASE_COINS = int(os.getenv("DAILY_REWARD_BASE_COINS", 120))
+    DAILY_REWARD_BASE_ENERGY = int(os.getenv("DAILY_REWARD_BASE_ENERGY", 1))
+    DAILY_STREAK_BONUS = int(os.getenv("DAILY_STREAK_BONUS", 40))
+    DAILY_MILESTONES = [int(x) for x in os.getenv("DAILY_MILESTONES", "7,14,21,28").split(",")]  # claim days to showcase
 
-    LEVEL_XP_CURVE = [0, 100, 250, 450, 700, 1000, 1400, 1850, 2350, 2900]
-    LEVEL_EXTRA_STEP = int(os.getenv("LEVEL_EXTRA_STEP", 500))
+    LEVEL_XP_CURVE = [0, 600, 1600, 3200, 5200, 7800, 11000, 15000, 19500, 24500]
+    LEVEL_EXTRA_STEP = int(os.getenv("LEVEL_EXTRA_STEP", 5000))
     LEVEL_REWARDS = {
         2: {"type": "coins", "amount": 400},
         3: {"type": "energy", "amount": 30},
@@ -59,17 +59,18 @@ class Config:
     STICKER_TRADE_ENERGY = int(os.getenv("STICKER_TRADE_ENERGY", 18))
 
     # Wheel of fortune
-    DAILY_FREE_WHEEL_SPINS = int(os.getenv("DAILY_FREE_WHEEL_SPINS", 1))
+    DAILY_FREE_WHEEL_SPINS = int(os.getenv("DAILY_FREE_WHEEL_SPINS", 0))
     WHEEL_COOLDOWN_HOURS = int(os.getenv("WHEEL_COOLDOWN_HOURS", 3))
     WHEEL_TOKEN_COST = int(os.getenv("WHEEL_TOKEN_COST", 1))
 
     # Leaderboard
     LEADERBOARD_SIZE = int(os.getenv("LEADERBOARD_SIZE", 25))
 
-    # Wheel of fortune
-    DAILY_FREE_WHEEL_SPINS = int(os.getenv("DAILY_FREE_WHEEL_SPINS", 1))
-    WHEEL_COOLDOWN_HOURS = int(os.getenv("WHEEL_COOLDOWN_HOURS", 4))
-    WHEEL_TOKEN_COST = int(os.getenv("WHEEL_TOKEN_COST", 1))
+    # Spin balancing
+    SPIN_PAYOUT_COINS_SCALAR = float(os.getenv("SPIN_PAYOUT_COINS_SCALAR", 0.45))
+    SPIN_PAYOUT_ENERGY_SCALAR = float(os.getenv("SPIN_PAYOUT_ENERGY_SCALAR", 0.2))
+    SPIN_PAYOUT_TOKEN_SCALAR = float(os.getenv("SPIN_PAYOUT_TOKEN_SCALAR", 0.08))
+    SPIN_BRICK_CHANCE = float(os.getenv("SPIN_BRICK_CHANCE", 0.32))
 
     # Payments (Stars / XTR)
     STAR_PACKAGES = [

@@ -97,8 +97,8 @@ def _get_daily_state(session, user: User) -> DailyRewardState:
 
 def _daily_reward_values(next_streak: int) -> Dict[str, int]:
     coins = Config.DAILY_REWARD_BASE_COINS + Config.DAILY_STREAK_BONUS * max(next_streak - 1, 0)
-    energy = Config.DAILY_REWARD_BASE_ENERGY + max(next_streak - 1, 0)
-    wheel_tokens = 1 if (next_streak in Config.DAILY_MILESTONES or next_streak % 7 == 0) else 0
+    energy = Config.DAILY_REWARD_BASE_ENERGY if next_streak % 4 == 0 else 0
+    wheel_tokens = 1 if next_streak in Config.DAILY_MILESTONES else 0
     return {"coins": coins, "energy": energy, "wheel_tokens": wheel_tokens}
 
 
