@@ -46,10 +46,10 @@ class Config:
         3: {"type": "energy", "amount": 30},
         4: {"type": "wheel_tokens", "amount": 1},
         5: {"type": "sticker_pack", "amount": 1},
-        6: {"type": "coins", "amount": 1200},
+        6: {"type": "coins", "amount": 500},
         7: {"type": "energy", "amount": 50},
         8: {"type": "spins", "amount": 3},
-        9: {"type": "coins", "amount": 2500},
+        9: {"type": "coins", "amount": 1000},
         10: {"type": "legendary_sticker", "amount": 1},
     }
 
@@ -64,7 +64,7 @@ class Config:
     WHEEL_TOKEN_COST = int(os.getenv("WHEEL_TOKEN_COST", 1))
 
     # Leaderboard
-    LEADERBOARD_SIZE = int(os.getenv("LEADERBOARD_SIZE", 25))
+    LEADERBOARD_SIZE = int(os.getenv("LEADERBOARD_SIZE", 50))
 
     # Spin balancing
     SPIN_PAYOUT_COINS_SCALAR = float(os.getenv("SPIN_PAYOUT_COINS_SCALAR", 0.45))
@@ -76,7 +76,7 @@ class Config:
     STAR_PACKAGES = [
         {
             "id": os.getenv("STAR_PACK_1_ID", "energy_100"),
-            "name": "Coral Splash 100",
+            "name": "+100 Energy",
             "stars": int(os.getenv("STAR_PACK_1_STARS", 50)),
             "energy": int(os.getenv("STAR_PACK_1_ENERGY", 100)),
             "bonus_spins": 0,
@@ -85,7 +85,7 @@ class Config:
         },
         {
             "id": os.getenv("STAR_PACK_2_ID", "energy_250"),
-            "name": "Abyss Diver 250",
+            "name": "+250 Energy",
             "stars": int(os.getenv("STAR_PACK_2_STARS", 120)),
             "energy": int(os.getenv("STAR_PACK_2_ENERGY", 250)),
             "bonus_spins": 0,
@@ -94,7 +94,7 @@ class Config:
         },
         {
             "id": os.getenv("STAR_PACK_3_ID", "energy_600"),
-            "name": "Mega Reef 600",
+            "name": "+600 Energy",
             "stars": int(os.getenv("STAR_PACK_3_STARS", 260)),
             "energy": int(os.getenv("STAR_PACK_3_ENERGY", 600)),
             "bonus_spins": 1,
@@ -103,7 +103,7 @@ class Config:
         },
         {
             "id": os.getenv("STAR_PACK_4_ID", "energy_1200"),
-            "name": "Galactic Tide 1200",
+            "name": "+1200 Energy",
             "stars": int(os.getenv("STAR_PACK_4_STARS", 520)),
             "energy": int(os.getenv("STAR_PACK_4_ENERGY", 1200)),
             "bonus_spins": 1,
@@ -112,7 +112,7 @@ class Config:
         },
         {
             "id": os.getenv("STAR_PACK_5_ID", "energy_2500"),
-            "name": "Titan Storm 2500",
+            "name": "+2500 Energy",
             "stars": int(os.getenv("STAR_PACK_5_STARS", 980)),
             "energy": int(os.getenv("STAR_PACK_5_ENERGY", 2500)),
             "bonus_spins": 1,
@@ -121,7 +121,7 @@ class Config:
         },
         {
             "id": os.getenv("STAR_PACK_6_ID", "energy_4200"),
-            "name": "Aurora Lumina 4200",
+            "name": "+4200 Energy",
             "stars": int(os.getenv("STAR_PACK_6_STARS", 1600)),
             "energy": int(os.getenv("STAR_PACK_6_ENERGY", 4200)),
             "bonus_spins": 1,
@@ -129,7 +129,7 @@ class Config:
             "art_url": "/static/images/star-pack-lumina.svg",
         },
         {
-            "id": os.getenv("STAR_PACK_7_ID", "energy_7200"),
+            "id": os.getenv("+7200 Energy", "energy_7200"),
             "name": "Orbital Riptide 7200",
             "stars": int(os.getenv("STAR_PACK_7_STARS", 2800)),
             "energy": int(os.getenv("STAR_PACK_7_ENERGY", 7200)),
